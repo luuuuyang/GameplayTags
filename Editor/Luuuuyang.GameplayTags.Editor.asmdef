@@ -1,0 +1,19 @@
+{
+    "name": "Luuuuyang.GameplayTags.Editor",
+    "references": [
+        "GUID:3c904597c18287341bf2531ab2635573"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "ODIN_INSPECTOR"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

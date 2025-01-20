@@ -1,0 +1,23 @@
+{
+  "name": "com.luuuuyang.gameplaytags",
+  "version": "1.0.0-exp",
+  "displayName": "Gameplay Tags",
+  "description": "Gameplay Tags are user-defined strings that function as conceptual, hierarchical labels. You can apply Gameplay Tags to objects in your project and evaluate them to drive your gameplay implementation, similarly to checking for booleans or flags.",
+  "unity": "2021.2",
+  "documentationUrl": "",
+  "changelogUrl": "",
+  "licensesUrl": "",
+  "dependencies": {
+    "com.unity.test-framework": "1.4.5",
+    "com.unity.test-framework.performance": "3.0.3"
+  },
+  "keywords": [
+    "gameplay",
+    "tag"
+  ],
+  "author": {
+    "name": "luuuuyang",
+    "email": "luuuuyang@163.com",
+    "url": "https://github.com/luuuuyang"
+  }
+}
