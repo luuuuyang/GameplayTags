@@ -1,21 +1,23 @@
-using UnityEngine;
 using System;
+using UnityEngine;
 
 namespace GameplayTags
 {
 	public enum GameplayTagEventType { NewOrRemoved, AnyCountChange }
 
 	[Serializable]
-	public class GameplayTag
+	public class GameplayTag : IComparable<GameplayTag>, IEquatable<GameplayTag>
 	{
 		public string TagName;
+
+		public static readonly GameplayTag EmptyTag;
 
 		public GameplayTag()
 		{
 			TagName = string.Empty;
 		}
 
-		public GameplayTag(string tagName)
+		public GameplayTag(in string tagName)
 		{
 			TagName = tagName;
 		}
@@ -35,13 +37,18 @@ namespace GameplayTags
 			return GameplayTagsManager.Instance.RequestGameplayTagParents(this);
 		}
 
+		public static GameplayTag RequestGameplayTag(in string tagName, bool errorIfNotFound = true)
+		{
+			return GameplayTagsManager.Instance.RequestGameplayTag(tagName, errorIfNotFound);
+		}
+
 		public bool MatchesTag(in GameplayTag tagToCheck)
 		{
-			GameplayTagContainer tagContainer = GameplayTagsManager.Instance.GetSingleTagContainer(this);
+			GameplayTagNode tagNode = GameplayTagsManager.Instance.FindTagNode(this);
 
-			if (tagContainer is not null)
+			if (tagNode is not null)
 			{
-				return tagContainer.HasTag(tagToCheck);
+				return tagNode.SingleTagContainer.HasTag(tagToCheck);
 			}
 
 			Debug.Assert(!IsValid(), $"MatchesTag passed invalid gameplay tag {TagName}, only registered tags can be used in containers");
@@ -59,19 +66,16 @@ namespace GameplayTags
 			return TagName == tagToCheck.TagName;
 		}
 
-		public static GameplayTag RequestGameplayTag(in string tagName, bool errorIfNotFound = true)
-		{
-			return GameplayTagsManager.Instance.RequestGameplayTag(tagName, errorIfNotFound);
-		}
-
 		public bool MatchesAny(in GameplayTagContainer containerToCheck)
 		{
-			var node = GameplayTagsManager.Instance.FindTagNode(this);
+			GameplayTagNode node = GameplayTagsManager.Instance.FindTagNode(this);
 
 			if (node is not null)
 			{
 				return node.SingleTagContainer.HasAny(containerToCheck);
 			}
+
+			Debug.Assert(!IsValid(), $"MatchesAny passed invalid gameplay tag {TagName}, only registered tags can be used in containers");
 
 			return false;
 		}
@@ -101,9 +105,18 @@ namespace GameplayTags
 			return TagName.CompareTo(other.TagName);
 		}
 
+		public bool Equals(GameplayTag other)
+		{
+			return TagName == other.TagName;
+		}
+
 		public override bool Equals(object obj)
 		{
-			return obj is GameplayTag tag && TagName == tag.TagName;
+			if (obj is GameplayTag other)
+			{
+				return Equals(other);
+			}
+			return false;
 		}
 
 		public override int GetHashCode()
@@ -115,7 +128,5 @@ namespace GameplayTags
 		{
 			return TagName;
 		}
-
-		public static readonly GameplayTag EmptyTag;
 	}
 }
