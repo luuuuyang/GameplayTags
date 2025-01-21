@@ -83,7 +83,7 @@ namespace GameplayTags.Editor
 
         public bool DeleteTagRedirect(string tagToDelete)
         {
-            GameplayTagSettings settings = AssetDatabase.LoadAssetAtPath<GameplayTagSettings>("Assets/GameplayTags/Config/DefaultGameplayTags.asset");
+            GameplayTagSettings settings = AssetDatabase.LoadAssetAtPath<GameplayTagSettings>("Packages/com.luuuuyang.gameplaytags/Editor/Config/DefaultGameplayTags.asset");
 
             for (int i = 0; i < settings.GameplayTagRedirects.Count; i++)
             {

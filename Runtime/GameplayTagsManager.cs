@@ -119,7 +119,7 @@ namespace GameplayTags
 
 		private Dictionary<string, GameplayTagSource> TagSources = new();
 
-		private string InvalidTagCharacters = "!@#$%^&*()_+-=[]{}|;:,.<>?~`";
+		private string InvalidTagCharacters;
 
 		private HashSet<string> MissingTagNames = new();
 
@@ -335,7 +335,7 @@ namespace GameplayTags
 
 			if (sourceType == GameplayTagSourceType.DefaultTagList)
 			{
-				newSource.SourceTagList = AssetDatabase.LoadAssetAtPath<GameplayTagsList>("Assets/GameplayTags/Config/DefaultGameplayTags.asset");
+				newSource.SourceTagList = AssetDatabase.LoadAssetAtPath<GameplayTagsList>("Packages/com.luuuuyang.gameplaytags/Editor/Config/DefaultGameplayTags.asset");
 			}
 
 			return newSource;
@@ -347,7 +347,7 @@ namespace GameplayTags
 			{
 				GameplayRootTag = new GameplayTagNode();
 
-				GameplayTagSettings mutableDefault = AssetDatabase.LoadAssetAtPath<GameplayTagSettings>("Assets/GameplayTags/Config/DefaultGameplayTags.asset");
+				GameplayTagSettings mutableDefault = AssetDatabase.LoadAssetAtPath<GameplayTagSettings>("Packages/com.luuuuyang.gameplaytags/Editor/Config/DefaultGameplayTags.asset");
 
 				InvalidTagCharacters = mutableDefault.InvalidTagCharacters;
 				InvalidTagCharacters += "\r\n\t";

@@ -19,8 +19,8 @@ namespace GameplayTags
     [CreateAssetMenu(fileName = "GameplayTagSettings", menuName = "GameplayAbilities/GameplayTagSettings")]
     public class GameplayTagSettings : GameplayTagsList
     {
-        public bool ImportTagsFromConfig;
+        public bool ImportTagsFromConfig = true;
         public List<GameplayTagRedirect> GameplayTagRedirects;
-        public string InvalidTagCharacters;
+        public string InvalidTagCharacters = "\",";
     }
 }
