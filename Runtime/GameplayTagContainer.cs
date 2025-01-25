@@ -7,17 +7,15 @@ using UnityEngine.Assertions;
 namespace GameplayTags
 {
 	[Serializable]
-	public class GameplayTagContainer
+	public class GameplayTagContainer : IEquatable<GameplayTagContainer>
 	{
-		public delegate void TagAddOrRemoveEventHandler(GameplayTag gameplay_tag);
-
-		public delegate void TagChangedEventHandler(GameplayTag gameplay_tag, int count);
+		public static readonly GameplayTagContainer EmptyContainer = new();
 
 		public List<GameplayTag> GameplayTags = new();
 
 		public List<GameplayTag> ParentTags = new();
 
-		public int Num => GameplayTags.Count;
+		public int Count => GameplayTags.Count;
 
 		public GameplayTagContainer()
 		{
@@ -65,12 +63,15 @@ namespace GameplayTags
 
 		public void CopyFrom(GameplayTagContainer other)
 		{
+			if (this == other)
+			{
+				return;
+			}
+
 			GameplayTags.Clear();
-			GameplayTags.Capacity = other.GameplayTags.Count;
 			GameplayTags.AddRange(other.GameplayTags);
 
 			ParentTags.Clear();
-			ParentTags.Capacity = other.ParentTags.Count;
 			ParentTags.AddRange(other.ParentTags);
 		}
 
@@ -86,6 +87,35 @@ namespace GameplayTags
 		public static bool operator !=(GameplayTagContainer a, GameplayTagContainer b)
 		{
 			return !(a == b);
+		}
+
+		public override bool Equals(object obj)
+		{
+			if (obj is GameplayTagContainer other)
+			{
+				return Equals(other);
+			}
+			return false;
+		}
+
+		public bool Equals(GameplayTagContainer other)
+		{
+			return this == other;
+		}
+
+		public override string ToString()
+		{
+			string retString = string.Empty;
+			for (int i = 0; i < GameplayTags.Count; i++)
+			{
+				retString += GameplayTags[i].ToString();
+
+				if (i < GameplayTags.Count - 1)
+				{
+					retString += ", ";
+				}
+			}
+			return retString;
 		}
 
 		public bool HasTag(in GameplayTag tagToCheck)
@@ -171,100 +201,139 @@ namespace GameplayTags
 			return true;
 		}
 
-		public void AddTag(GameplayTag tagToAdd)
+		public void AddTag(in GameplayTag tagToAdd)
 		{
-			if (!tagToAdd.IsValid())
+			if (tagToAdd.IsValid())
 			{
-				return;
+				GameplayTags.AddUnique(tagToAdd);
+
+				GameplayTagsManager.Instance.ExtractParentTags(tagToAdd, ParentTags);
 			}
-			GameplayTags.Add(tagToAdd);
-			AddParentsForTag(tagToAdd);
 		}
 
-		public void AddTagFast(GameplayTag tagToAdd)
+		public void AddTagFast(in GameplayTag tagToAdd)
 		{
-			GameplayTags.Add(tagToAdd);
-			AddParentsForTag(tagToAdd);
+			GameplayTags.AddUnique(tagToAdd);
+			GameplayTagsManager.Instance.ExtractParentTags(tagToAdd, ParentTags);
 		}
 
 		public void AddParentsForTag(in GameplayTag tag)
 		{
-			GameplayTagContainer singleContainer = GameplayTagsManager.Instance.GetSingleTagContainer(tag);
-			if (singleContainer is not null)
-			{
-				foreach (GameplayTag parentTag in singleContainer.ParentTags)
-				{
-					ParentTags.AddUnique(parentTag);
-				}
-			}
+			GameplayTagsManager.Instance.ExtractParentTags(tag, ParentTags);
 		}
 
 		public void FillParentTags()
 		{
 			ParentTags.Reset();
-			foreach (GameplayTag tag in GameplayTags)
+
+			if (GameplayTags.Count > 0)
 			{
-				AddParentsForTag(tag);
+				foreach (GameplayTag tag in GameplayTags)
+				{
+					GameplayTagsManager.Instance.ExtractParentTags(tag, ParentTags);
+				}
 			}
 		}
 
 		public GameplayTagContainer GetGameplayTagParents()
 		{
-			var result_container = new GameplayTagContainer();
-			// TODO duplicate
-			result_container.GameplayTags = GameplayTags;
+			GameplayTagContainer resultContainer = new()
+			{
+				GameplayTags = new List<GameplayTag>(GameplayTags)
+			};
+
 			foreach (GameplayTag tag in ParentTags)
 			{
-				result_container.GameplayTags.AddUnique(tag);
+				resultContainer.GameplayTags.AddUnique(tag);
 			}
-			return result_container;
+
+			return resultContainer;
 		}
 
-		public GameplayTagContainer Filter(GameplayTagContainer other_container)
+		public GameplayTagContainer Filter(in GameplayTagContainer otherContainer)
 		{
-			var result_container = new GameplayTagContainer();
+			GameplayTagContainer resultContainer = new();
+
 			foreach (GameplayTag tag in GameplayTags)
 			{
-				if (tag.MatchesAny(other_container))
+				if (tag.MatchesAny(otherContainer))
 				{
-					result_container.AddTagFast(tag);
+					resultContainer.AddTagFast(tag);
 				}
 			}
-			return result_container;
+
+			return resultContainer;
 		}
 
-		public GameplayTagContainer FilterExact(GameplayTagContainer other_container)
+		public GameplayTagContainer FilterExact(in GameplayTagContainer otherContainer)
 		{
-			var result_container = new GameplayTagContainer();
+			GameplayTagContainer resultContainer = new();
+
 			foreach (GameplayTag tag in GameplayTags)
 			{
-				if (tag.MatchesAnyExact(other_container))
+				if (tag.MatchesAnyExact(otherContainer))
 				{
-					result_container.AddTagFast(tag);
+					resultContainer.AddTagFast(tag);
 				}
 			}
-			return result_container;
+
+			return resultContainer;
 		}
 
 		public void AppendTags(in GameplayTagContainer other)
 		{
-			GameplayTags.Capacity = GameplayTags.Count + other.GameplayTags.Count;
-			ParentTags.Capacity = ParentTags.Count + other.ParentTags.Count;
-
-			foreach (GameplayTag other_tag in other)
+			if (other.IsEmpty())
 			{
-				GameplayTags.AddUnique(other_tag);
+				return;
 			}
 
-			foreach (GameplayTag other_tag in other.ParentTags)
+
+			int oldTagCount = GameplayTags.Count;
+			GameplayTags.Capacity = oldTagCount + other.GameplayTags.Count;
+			foreach (GameplayTag otherTag in other)
 			{
-				ParentTags.AddUnique(other_tag);
+				int searchIndex = 0;
+				while (true)
+				{
+					if (searchIndex >= oldTagCount)
+					{
+						GameplayTags.Add(otherTag);
+						break;
+					}
+					else if (GameplayTags[searchIndex] == otherTag)
+					{
+						break;
+					}
+
+					searchIndex++;
+				}
+			}
+
+			oldTagCount = ParentTags.Count;
+			ParentTags.Capacity = oldTagCount + other.ParentTags.Count;
+			foreach (GameplayTag otherParentTag in other.ParentTags)
+			{
+				int searchIndex = 0;
+				while (true)
+				{
+					if (searchIndex >= oldTagCount)
+					{
+						ParentTags.Add(otherParentTag);
+						break;
+					}
+					else if (ParentTags[searchIndex] == otherParentTag)
+					{
+						break;
+					}
+
+					searchIndex++;
+				}
 			}
 		}
 
 		public void AppendMatchingTags(in GameplayTagContainer otherA, in GameplayTagContainer otherB)
 		{
-			foreach (GameplayTag otherATag in otherA)
+			foreach (GameplayTag otherATag in otherA.GameplayTags)
 			{
 				if (otherATag.MatchesAny(otherB))
 				{
@@ -273,12 +342,13 @@ namespace GameplayTags
 			}
 		}
 
-		public bool RemoveTag(GameplayTag tag_to_remove, bool defer_parent_tags = false)
+		public bool RemoveTag(in GameplayTag tagToRemove, bool deferParentTags = false)
 		{
-			var num_changed = GameplayTags.RemoveSingle(tag_to_remove);
-			if (num_changed > 0)
+			int numChanged = GameplayTags.RemoveSingle(tagToRemove);
+
+			if (numChanged > 0)
 			{
-				if (!defer_parent_tags)
+				if (!deferParentTags)
 				{
 					FillParentTags();
 				}
@@ -287,23 +357,25 @@ namespace GameplayTags
 			return false;
 		}
 
-		public void RemoveTags(GameplayTagContainer tags_to_remove)
+		public void RemoveTags(in GameplayTagContainer tagsToRemove)
 		{
-			var num_changed = 0;
-			foreach (GameplayTag tag in tags_to_remove)
+			int numChanged = 0;
+
+			foreach (GameplayTag tag in tagsToRemove)
 			{
-				num_changed += GameplayTags.RemoveSingle(tag);
+				numChanged += GameplayTags.RemoveSingle(tag);
 			}
-			if (num_changed > 0)
+
+			if (numChanged > 0)
 			{
 				FillParentTags();
 			}
 		}
 
-		public void Reset(int new_size = 0)
+		public void Reset(int slack = 0)
 		{
-			GameplayTags.Reset(new_size);
-			ParentTags.Reset(new_size);
+			GameplayTags.Reset(slack);
+			ParentTags.Reset(slack);
 		}
 	}
 
@@ -1093,7 +1165,7 @@ namespace GameplayTags
 
 		protected void EmitTagTokens(in GameplayTagContainer tagsToEmit, List<byte> tokenStream, List<GameplayTag> tagDictionary, ref string debugString)
 		{
-			byte numTags = (byte)tagsToEmit.Num;
+			byte numTags = (byte)tagsToEmit.Count;
 			tokenStream.Add(numTags);
 
 			bool firstTag = true;

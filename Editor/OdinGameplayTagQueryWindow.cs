@@ -42,7 +42,7 @@ namespace GameplayTags.Editor
             TagQueries = args.EditableQueries;
 
             ReadOnly = args.ReadOnly;
-            OnQueriesCommitted = args.OnQueriesCommitted;
+            // OnQueriesCommitted = args.OnQueriesCommitted;
 
             EditableGameplayTagQuery editableGameplayTagQuery = CreateEditableQuery(TagQueries[0]);
             EditableQuery = editableGameplayTagQuery;
@@ -113,7 +113,7 @@ namespace GameplayTags.Editor
     {
         public string Title;
         public bool ReadOnly;
-        public GameplayTagQueryWindow.OnQueriesCommittedDelegate OnQueriesCommitted;
+        // public GameplayTagQueryWindow.OnQueriesCommittedDelegate OnQueriesCommitted;
         public List<GameplayTagQuery> EditableQueries;
     };
 }

@@ -50,11 +50,11 @@ namespace GameplayTags.Editor
         {
             GameplayTagQueryWindowArgs args = new()
             {
-                OnQueriesCommitted = OnQueriesCommitted,
+                // OnQueriesCommitted = OnQueriesCommitted,
                 EditableQueries = CachedQueries,
                 ReadOnly = ReadOnly,
             };
-            EditorWindow.GetWindow<GameplayTagQueryWindow>().OpenWindow(args);
+            // EditorWindow.GetWindow<GameplayTagQueryWindow>().OpenWindow(args);
         }
 
         private void OnClearAllButtonClicked()

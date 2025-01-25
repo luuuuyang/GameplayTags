@@ -35,10 +35,23 @@ namespace GameplayTags
 
 	public class GameplayTagNode
 	{
+		public GameplayTag CompleteTag => CompleteTagWithParents.Count > 0 ? CompleteTagWithParents.GameplayTags[0] : GameplayTag.EmptyTag;
+		public string CompleteTagName => CompleteTag.TagName;
+		public string SimpleTagName => Tag;
+		public GameplayTagNode ParentTagNode => ParentNode;
+		public List<GameplayTagNode> ChildTagNodes => ChildTags;
+		public GameplayTagContainer SingleTagContainer => CompleteTagWithParents;
+
 		private string Tag;
 		private GameplayTagContainer CompleteTagWithParents = new();
 		private List<GameplayTagNode> ChildTags = new();
 		private GameplayTagNode ParentNode;
+
+#if UNITY_EDITOR
+		public List<string> SourceNames = new();
+		public bool IsExplicitTag;
+		public string DevComment;
+#endif
 
 		public GameplayTagNode() { }
 
@@ -46,11 +59,13 @@ namespace GameplayTags
 		{
 			Tag = tag;
 			ParentNode = parentNode;
+
 			CompleteTagWithParents.GameplayTags.Add(new GameplayTag(fullTag));
 
-			if (ParentNode is not null && string.IsNullOrEmpty(ParentNode.SimpleTagName) == false)
+			if (ParentNode is not null && !string.IsNullOrEmpty(ParentNode.SimpleTagName))
 			{
 				GameplayTagContainer parentContainer = ParentNode.SingleTagContainer;
+
 				CompleteTagWithParents.ParentTags.Add(parentContainer.GameplayTags[0]);
 				CompleteTagWithParents.ParentTags.AddRange(parentContainer.ParentTags);
 			}
@@ -60,35 +75,17 @@ namespace GameplayTags
 #endif
 		}
 
-		public GameplayTag CompleteTag => CompleteTagWithParents.Num > 0 ? CompleteTagWithParents.GameplayTags[0] : GameplayTag.EmptyTag;
-
-		public string CompleteTagName => CompleteTag.TagName;
-
-		public string SimpleTagName => Tag;
-
-		public GameplayTagNode ParentTagNode => ParentNode;
-
-		public List<GameplayTagNode> ChildTagNodes => ChildTags;
-
-		public GameplayTagContainer SingleTagContainer => CompleteTagWithParents;
-
-#if UNITY_EDITOR
-		public List<string> SourceNames = new();
-		public bool IsExplicitTag;
-		public string DevComment;
-#endif
-
 		public void ResetNode()
 		{
 			Tag = null;
 			CompleteTagWithParents.Reset();
 
-			foreach (var child in ChildTags)
+			for (int childIdx = 0; childIdx < ChildTags.Count; childIdx++)
 			{
-				child.ResetNode();
+				ChildTags[childIdx].ResetNode();
 			}
-			ChildTags.Clear();
 
+			ChildTags.Clear();
 			ParentNode = null;
 
 #if UNITY_EDITOR
@@ -102,13 +99,9 @@ namespace GameplayTags
 		public string SourceName;
 		public GameplayTagSourceType SourceType;
 		public GameplayTagsList SourceTagList;
+		public static string DefaultName => NAME_DefaultGameplayTagsSO;
 
-		public static readonly string DefaultGameplayTagsSO = "DefaultGameplayTags.asset";
-
-		public static string GetDefaultName()
-		{
-			return DefaultGameplayTagsSO;
-		}
+		private static readonly string NAME_DefaultGameplayTagsSO = "DefaultGameplayTags.asset";
 	}
 
 	public class GameplayTagsManager : Singleton<GameplayTagsManager>
@@ -136,7 +129,7 @@ namespace GameplayTags
 
 			GameplayTagSource foundSource = FindOrAddTagSource(sourceName, GameplayTagSourceType.DataTable);
 
-			foreach (var tag in tags)
+			foreach (string tag in tags)
 			{
 				AddTagTableRow(new GameplayTagTableRow(tag, ""), sourceName);
 			}
@@ -150,14 +143,12 @@ namespace GameplayTags
 
 		public GameplayTagContainer GetSingleTagContainer(in GameplayTag gameplayTag)
 		{
-			GameplayTagNodeMap.TryGetValue(gameplayTag, out GameplayTagNode node);
-			if (node is not null)
+			if (GameplayTagNodeMap.TryGetValue(gameplayTag, out GameplayTagNode node))
 			{
 				return node.SingleTagContainer;
 			}
 			return null;
 		}
-
 
 		public GameplayTag RequestGameplayTag(string tagName, bool errorIfNotFound = true)
 		{
@@ -167,7 +158,8 @@ namespace GameplayTags
 			{
 				return possibleTag;
 			}
-			else if (errorIfNotFound)
+
+			if (errorIfNotFound)
 			{
 				if (!MissingTagNames.Contains(tagName))
 				{
@@ -254,32 +246,56 @@ namespace GameplayTags
 			return false;
 		}
 
-		public GameplayTagContainer RequestGameplayTagParents(GameplayTag gameplayTag)
+		public GameplayTagContainer RequestGameplayTagParents(in GameplayTag gameplayTag)
 		{
-			var parentTags = GetSingleTagContainer(gameplayTag);
-			return parentTags.GetGameplayTagParents();
+			GameplayTagContainer parentTags = GetSingleTagContainer(gameplayTag);
+			
+			if (parentTags is not null)
+			{
+				return parentTags.GetGameplayTagParents();
+			}
+			return new GameplayTagContainer();
 		}
 
-		public GameplayTagContainer RequestAllGameplayTags(GameplayTagContainer tagContainer, bool onlyIncludeDictionaryTags = false)
+		public bool ExtractParentTags(in GameplayTag gameplayTag, List<GameplayTag> uniqueParentTags)
 		{
-			List<GameplayTagNode> valueArray = GameplayTagNodeMap.Values.ToList();
-
-			foreach (GameplayTagNode tagNode in valueArray)
+			if (!gameplayTag.IsValid())
 			{
-#if UNITY_EDITOR
-				bool dictTag = IsDictionaryTag(tagNode.CompleteTagName);
-#else
-				bool dictTag = false;
-#endif
-				if (!onlyIncludeDictionaryTags || dictTag)
-				{
-					GameplayTag tag = GameplayTagNodeMap.First(x => x.Value == tagNode).Key;
-					Debug.Assert(tag is not null);
-					tagContainer.AddTagFast(tag);
-				}
+				return false;
 			}
 
-			return tagContainer;
+			List<GameplayTag> validationCopy = new();
+
+			int oldSize = uniqueParentTags.Count;
+			string rawTag = gameplayTag.TagName;
+
+			if (GameplayTagNodeMap.TryGetValue(gameplayTag, out GameplayTagNode node))
+			{
+				GameplayTagContainer singleContainer = node.SingleTagContainer;
+				foreach (GameplayTag parentTag in singleContainer.ParentTags)
+				{
+					uniqueParentTags.AddUnique(parentTag);
+				}
+			}
+			else
+			{
+				gameplayTag.ParseParentTags(uniqueParentTags);
+			}
+
+
+			return uniqueParentTags.Count != oldSize;
+		}
+
+		public void RequestAllGameplayTags(GameplayTagContainer tagContainer, bool onlyIncludeDictionaryTags = false)
+		{
+			foreach (var nodePair in GameplayTagNodeMap)
+			{
+				GameplayTagNode tagNode = nodePair.Value;
+				if (!onlyIncludeDictionaryTags || tagNode.IsExplicitTag)
+				{
+					tagContainer.AddTagFast(tagNode.CompleteTag);
+				}
+			}
 		}
 
 		public GameplayTag RequestGameplayTagDirectParent(in GameplayTag gameplayTag)
@@ -298,8 +314,11 @@ namespace GameplayTags
 
 		public GameplayTagNode FindTagNode(in GameplayTag gameplayTag)
 		{
-			GameplayTagNodeMap.TryGetValue(gameplayTag, out var node);
-			return node;
+			if (GameplayTagNodeMap.TryGetValue(gameplayTag, out GameplayTagNode node))
+			{
+				return node;
+			}
+			return null;
 		}
 
 		public GameplayTagNode FindTagNode(string tagName)
@@ -310,7 +329,11 @@ namespace GameplayTags
 
 		public GameplayTagSource FindTagSource(string tagSourceName)
 		{
-			return TagSources.GetValueOrDefault(tagSourceName);
+			if (TagSources.TryGetValue(tagSourceName, out GameplayTagSource source))
+			{
+				return source;
+			}
+			return null;
 		}
 
 		public GameplayTagSource FindOrAddTagSource(string tagSourceName, GameplayTagSourceType sourceType)
@@ -331,7 +354,7 @@ namespace GameplayTags
 				SourceName = tagSourceName,
 				SourceType = sourceType,
 			};
-			TagSources[tagSourceName] = newSource;
+			TagSources.Add(tagSourceName, newSource);
 
 			if (sourceType == GameplayTagSourceType.DefaultTagList)
 			{
@@ -356,7 +379,7 @@ namespace GameplayTags
 				mutableDefault.SortTags();
 #endif
 
-				string TagSource = GameplayTagSource.GetDefaultName();
+				string TagSource = GameplayTagSource.DefaultName;
 				GameplayTagSource defaultSource = FindOrAddTagSource(TagSource, GameplayTagSourceType.DefaultTagList);
 
 				foreach (GameplayTagTableRow tableRow in mutableDefault.GameplayTagList)
@@ -403,28 +426,28 @@ namespace GameplayTags
 #endif
 
 			string[] subTags = fullTagString.Split('.');
-			fullTagString = string.Empty;
+			fullTagString = null;
 
 			int numSubTags = subTags.Length;
 
-			for (int i = 0; i < numSubTags; i++)
+			for (int subTagIdx = 0; subTagIdx < numSubTags; subTagIdx++)
 			{
-				bool isExplicitTag = i == numSubTags - 1;
-				string shortTagName = subTags[i];
+				bool isExplicitTag = subTagIdx == (numSubTags - 1);
+				string shortTagName = subTags[subTagIdx];
 				string fullTagName;
 
 				if (isExplicitTag)
 				{
 					fullTagName = originalTagName;
 				}
-				else if (i == 0)
+				else if (subTagIdx == 0)
 				{
 					fullTagName = shortTagName;
-					fullTagString = subTags[i];
+					fullTagString = subTags[subTagIdx];
 				}
 				else
 				{
-					fullTagString += "." + subTags[i];
+					fullTagString += "." + subTags[subTagIdx];
 					fullTagName = fullTagString;
 				}
 
@@ -440,18 +463,24 @@ namespace GameplayTags
 			int foundNodeIdx = -1;
 			int whereToInsert = -1;
 
-			int lowerBoundIndex = nodeArray.FindIndex((e) => { return string.Compare(e.SimpleTagName, tag) >= 0; });
-			if (lowerBoundIndex < 0)
-			{
-				lowerBoundIndex = nodeArray.Count;
-			}
+			int lowerBoundIndex = nodeArray.FindIndex(node => { return string.Compare(node.SimpleTagName, tag) >= 0; });
 
-			if (lowerBoundIndex < nodeArray.Count)
+			if (lowerBoundIndex >= 0 && lowerBoundIndex < nodeArray.Count)
 			{
 				GameplayTagNode curNode = nodeArray[lowerBoundIndex];
 				if (curNode.SimpleTagName == tag)
 				{
 					foundNodeIdx = lowerBoundIndex;
+#if UNITY_EDITOR
+					if (isExplicitTag)
+					{
+						if (curNode.IsExplicitTag && isExplicitTag)
+						{
+
+						}
+						curNode.IsExplicitTag = curNode.IsExplicitTag || isExplicitTag;
+					}
+#endif
 				}
 				else
 				{
@@ -469,10 +498,11 @@ namespace GameplayTags
 				GameplayTagNode tagNode = new(tag, fullTag, parentNode != GameplayRootTag ? parentNode : null, isExplicitTag);
 
 				nodeArray.Insert(whereToInsert, tagNode);
-
 				foundNodeIdx = whereToInsert;
 
 				GameplayTag gameplayTag = tagNode.CompleteTag;
+
+				Debug.Assert(gameplayTag.TagName == fullTag);
 
 				GameplayTagNodeMap.Add(gameplayTag, tagNode);
 			}

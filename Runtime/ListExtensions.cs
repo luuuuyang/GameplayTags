@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -19,7 +20,6 @@ namespace GameplayTags
 
 		public static void AppendUnique<T>(this List<T> destination, IEnumerable<T> source)
 		{
-			// 预分配空间以避免多次扩容
 			int sourceCount = source.Count();
 			if (destination.Capacity < destination.Count + sourceCount)
 			{

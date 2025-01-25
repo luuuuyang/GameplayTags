@@ -1,48 +1,78 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace GameplayTags
 {
-	public enum GameplayTagEventType { NewOrRemoved, AnyCountChange }
+	
 
 	[Serializable]
-	public class GameplayTag : IComparable<GameplayTag>, IEquatable<GameplayTag>
+	public struct GameplayTag : IComparable<GameplayTag>, IEquatable<GameplayTag>, ICloneable
 	{
 		public string TagName;
 
 		public static readonly GameplayTag EmptyTag;
-
-		public GameplayTag()
-		{
-			TagName = string.Empty;
-		}
 
 		public GameplayTag(in string tagName)
 		{
 			TagName = tagName;
 		}
 
-		public bool IsValid()
+		public readonly bool IsValid()
 		{
 			return !string.IsNullOrEmpty(TagName);
 		}
 
-		public GameplayTag RequestDirectParent()
+		public readonly GameplayTag RequestDirectParent()
 		{
 			return GameplayTagsManager.Instance.RequestGameplayTagDirectParent(this);
 		}
 
-		public GameplayTagContainer GetGameplayTagParents()
+		public readonly GameplayTagContainer GetGameplayTagParents()
 		{
 			return GameplayTagsManager.Instance.RequestGameplayTagParents(this);
 		}
 
-		public static GameplayTag RequestGameplayTag(in string tagName, bool errorIfNotFound = true)
+		public void ParseParentTags(List<GameplayTag> uniqueParentTags)
+		{
+			string rawTag = TagName;
+
+			int dotIndex = rawTag.LastIndexOf('.');
+
+			while (dotIndex != -1)
+			{
+				rawTag = rawTag[..dotIndex];
+				dotIndex = rawTag.LastIndexOf('.');
+
+				GameplayTag parentTag = new GameplayTag(rawTag);
+
+				uniqueParentTags.AddUnique(parentTag);
+			}
+		}
+
+        public readonly GameplayTagContainer SingleTagContainer
+        {
+            get
+            {
+                GameplayTagNode node = GameplayTagsManager.Instance.FindTagNode(this);
+
+                if (node is not null)
+                {
+                    return node.SingleTagContainer;
+                }
+
+                Debug.Assert(!IsValid(), $"GetSingleTagContainer passed invalid gameplay tag {TagName}, only registered tags can be queried");
+
+                return GameplayTagContainer.EmptyContainer;
+            }
+        }
+
+        public static GameplayTag RequestGameplayTag(in string tagName, bool errorIfNotFound = true)
 		{
 			return GameplayTagsManager.Instance.RequestGameplayTag(tagName, errorIfNotFound);
 		}
 
-		public bool MatchesTag(in GameplayTag tagToCheck)
+		public readonly bool MatchesTag(in GameplayTag tagToCheck)
 		{
 			GameplayTagNode tagNode = GameplayTagsManager.Instance.FindTagNode(this);
 
@@ -56,7 +86,7 @@ namespace GameplayTags
 			return false;
 		}
 
-		public bool MatchesTagExact(in GameplayTag tagToCheck)
+		public readonly bool MatchesTagExact(in GameplayTag tagToCheck)
 		{
 			if (!tagToCheck.IsValid())
 			{
@@ -66,7 +96,7 @@ namespace GameplayTags
 			return TagName == tagToCheck.TagName;
 		}
 
-		public bool MatchesAny(in GameplayTagContainer containerToCheck)
+		public readonly bool MatchesAny(in GameplayTagContainer containerToCheck)
 		{
 			GameplayTagNode node = GameplayTagsManager.Instance.FindTagNode(this);
 
@@ -80,7 +110,7 @@ namespace GameplayTags
 			return false;
 		}
 
-		public bool MatchesAnyExact(in GameplayTagContainer containerToCheck)
+		public readonly bool MatchesAnyExact(in GameplayTagContainer containerToCheck)
 		{
 			if (containerToCheck.IsEmpty())
 			{
@@ -89,7 +119,7 @@ namespace GameplayTags
 
 			return containerToCheck.GameplayTags.Contains(this);
 		}
-
+		
 		public static bool operator ==(GameplayTag a, GameplayTag b)
 		{
 			return a.TagName == b.TagName;
@@ -121,12 +151,17 @@ namespace GameplayTags
 
 		public override int GetHashCode()
 		{
-			return TagName.GetHashCode();
+			return TagName?.GetHashCode() ?? 0;
 		}
 
 		public override string ToString()
 		{
 			return TagName;
 		}
-	}
+
+        public object Clone()
+        {
+            return new GameplayTag(TagName);
+        }
+    }
 }

@@ -192,6 +192,17 @@ namespace GameplayTags.Tests
 
             Assert.IsTrue(filteredTagContainer.HasTagExact(cueTag));
             Assert.IsTrue(!filteredTagContainer.HasTagExact(effectDamage1Tag));
+
+            GameplayTagContainer singleTagContainer = effectDamage1Tag.SingleTagContainer;
+            GameplayTagContainer parentContainer = effectDamage1Tag.GetGameplayTagParents();
+
+            Assert.IsTrue(singleTagContainer.HasTagExact(effectDamage1Tag));
+            Assert.IsTrue(singleTagContainer.HasTag(effectDamageTag));
+            Assert.IsTrue(!singleTagContainer.HasTagExact(effectDamageTag));
+
+            Assert.IsTrue(parentContainer.HasTagExact(effectDamage1Tag));
+            Assert.IsTrue(parentContainer.HasTag(effectDamageTag));
+            Assert.IsTrue(parentContainer.HasTagExact(effectDamageTag));
         }
 
         [Test, Performance]
@@ -205,10 +216,11 @@ namespace GameplayTags.Tests
             GameplayTagContainer tagContainer = null;
 
             bool result = true;
+            const int smallTest = 1000, largeTest = 10000;
 
             Measure.Method(() =>
             {
-                for (int i = 0; i < 10000; i++)
+                for (int i = 0; i < largeTest; i++)
                 {
                     GameplayTagsManager.Instance.RequestGameplayTag("Effect.Damage");
                 }
@@ -216,7 +228,7 @@ namespace GameplayTags.Tests
 
             Measure.Method(() =>
             {
-                for (int i = 0; i < 1000; i++)
+                for (int i = 0; i < smallTest; i++)
                 {
                     tagContainer = new();
                     tagContainer.AddTag(effectDamage1Tag);
@@ -231,9 +243,23 @@ namespace GameplayTags.Tests
 
             Measure.Method(() =>
             {
-                for (int i = 0; i < 1000; i++)
+                for (int i = 0; i < smallTest; i++)
+                {
+                    GameplayTagContainer tagContainerNew = new(effectDamageTag);
+                    tagContainerNew.CopyFrom(tagContainer);
+
+                    GameplayTagContainer movedContainer = new(tagContainerNew);
+
+                    result &= movedContainer.Count == tagContainer.Count;
+                }
+            }).Run();
+
+            Measure.Method(() =>
+            {
+                for (int i = 0; i < smallTest; i++)
                 {
                     GameplayTagContainer tagContainerNew = new();
+
                     foreach (GameplayTag tag in tagContainer)
                     {
                         tagContainerNew.AddTag(tag);
@@ -243,10 +269,37 @@ namespace GameplayTags.Tests
 
             Measure.Method(() =>
             {
-                for (int i = 0; i < 1000; i++)
+                for (int i = 0; i < smallTest; i++)
                 {
-                    GameplayTagContainer tagContainerNew = new();
+                    GameplayTagContainer tagContainerNew = new(effectDamage1Tag);
+
                     tagContainerNew.AppendTags(tagContainer);
+                }
+            }).Run();
+
+            Measure.Method(() =>
+            {
+                for (int i = 0; i < smallTest; i++)
+                {
+                    GameplayTagContainer tagContainerNew = new(tagContainer);
+
+                    tagContainerNew.AppendTags(tagContainer);
+                }
+            }).Run();
+
+            Measure.Method(() =>
+            {
+                for (int i = 0; i < largeTest; i++)
+                {
+                    GameplayTagContainer tagContainerNew = new(effectDamage1Tag.SingleTagContainer);
+                }
+            }).Run();
+
+            Measure.Method(() =>
+            {
+                for (int i = 0; i < largeTest; i++)
+                {
+                    GameplayTagContainer tagContainerParents = new(effectDamage1Tag.GetGameplayTagParents());
                 }
             }).Run();
 
@@ -257,7 +310,7 @@ namespace GameplayTags.Tests
 
             Measure.Method(() =>
             {
-                for (int i = 0; i < 10000; i++)
+                for (int i = 0; i < largeTest; i++)
                 {
                     result &= effectDamage1Tag.MatchesAnyExact(tagContainer);
                 }
@@ -265,7 +318,7 @@ namespace GameplayTags.Tests
 
             Measure.Method(() =>
             {
-                for (int i = 0; i < 10000; i++)
+                for (int i = 0; i < largeTest; i++)
                 {
                     result &= effectDamage1Tag.MatchesAny(tagContainer);
                 }
@@ -273,7 +326,7 @@ namespace GameplayTags.Tests
 
             Measure.Method(() =>
             {
-                for (int i = 0; i < 10000; i++)
+                for (int i = 0; i < largeTest; i++)
                 {
                     result &= tagContainer.HasTagExact(effectDamage1Tag);
                 }
@@ -281,7 +334,7 @@ namespace GameplayTags.Tests
 
             Measure.Method(() =>
             {
-                for (int i = 0; i < 10000; i++)
+                for (int i = 0; i < largeTest; i++)
                 {
                     result &= tagContainer.HasTag(effectDamage1Tag);
                 }
@@ -289,7 +342,7 @@ namespace GameplayTags.Tests
 
             Measure.Method(() =>
             {
-                for (int i = 0; i < 10000; i++)
+                for (int i = 0; i < largeTest; i++)
                 {
                     result &= tagContainer.HasAll(tagContainer2);
                 }
@@ -297,7 +350,7 @@ namespace GameplayTags.Tests
 
             Measure.Method(() =>
             {
-                for (int i = 0; i < 10000; i++)
+                for (int i = 0; i < largeTest; i++)
                 {
                     result &= tagContainer.HasAny(tagContainer2);
                 }
