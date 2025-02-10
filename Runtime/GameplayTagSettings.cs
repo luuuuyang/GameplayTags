@@ -8,7 +8,7 @@ namespace GameplayTags
     {
         public string ConfigFileName;
 
-        public List<GameplayTagTableRow> GameplayTagList;
+        public List<GameplayTagTableRow> GameplayTagList = new();
 
         public void SortTags()
         {

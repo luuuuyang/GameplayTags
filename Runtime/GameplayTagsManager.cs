@@ -13,7 +13,7 @@ namespace GameplayTags
 		public string Tag;
 		public string DevComment;
 
-		public GameplayTagTableRow(string tag, string devComment)
+		public GameplayTagTableRow(string tag, string devComment = "")
 		{
 			Tag = tag;
 			DevComment = devComment;
@@ -27,6 +27,7 @@ namespace GameplayTags
 
 	public enum GameplayTagSourceType
 	{
+		Native,
 		DefaultTagList,
 		TagList,
 		DataTable,
@@ -98,14 +99,17 @@ namespace GameplayTags
 	{
 		public string SourceName;
 		public GameplayTagSourceType SourceType;
-		public GameplayTagsList SourceTagList;
+		public GameplayTagsList SourceTagList = new();
 		public static string DefaultName => NAME_DefaultGameplayTagsSO;
+		public static string NativeName => NAME_NativeGameplayTags;
 
 		private static readonly string NAME_DefaultGameplayTagsSO = "DefaultGameplayTags.asset";
+		private static readonly string NAME_NativeGameplayTags = "Native";
 	}
 
 	public class GameplayTagsManager : Singleton<GameplayTagsManager>
 	{
+		private HashSet<string> LegacyNativeTags = new();
 		private GameplayTagNode GameplayRootTag;
 
 		private Dictionary<GameplayTag, GameplayTagNode> GameplayTagNodeMap = new();
@@ -115,6 +119,10 @@ namespace GameplayTags
 		private string InvalidTagCharacters;
 
 		private HashSet<string> MissingTagNames = new();
+
+		private bool ShouldDeferGameplayTagTreeRebuilds;
+
+		private bool DoneAddingNativeTags;
 
 		public override void InitializeSingleton()
 		{
@@ -249,7 +257,7 @@ namespace GameplayTags
 		public GameplayTagContainer RequestGameplayTagParents(in GameplayTag gameplayTag)
 		{
 			GameplayTagContainer parentTags = GetSingleTagContainer(gameplayTag);
-			
+
 			if (parentTags is not null)
 			{
 				return parentTags.GetGameplayTagParents();
@@ -356,7 +364,11 @@ namespace GameplayTags
 			};
 			TagSources.Add(tagSourceName, newSource);
 
-			if (sourceType == GameplayTagSourceType.DefaultTagList)
+			if (sourceType == GameplayTagSourceType.Native)
+			{
+				newSource.SourceTagList = ScriptableObject.CreateInstance<GameplayTagsList>();
+			}
+			else if (sourceType == GameplayTagSourceType.DefaultTagList)
 			{
 				newSource.SourceTagList = AssetDatabase.LoadAssetAtPath<GameplayTagsList>("Packages/com.luuuuyang.gameplaytags/Editor/Config/DefaultGameplayTags.asset");
 			}
@@ -374,6 +386,21 @@ namespace GameplayTags
 
 				InvalidTagCharacters = mutableDefault.InvalidTagCharacters;
 				InvalidTagCharacters += "\r\n\t";
+
+				{
+					foreach (string tagToAdd in LegacyNativeTags)
+					{
+						AddTagTableRow(new GameplayTagTableRow(tagToAdd), GameplayTagSource.NativeName);
+					}
+
+					foreach (NativeGameplayTag nativeTag in NativeGameplayTag.RegisteredNativeTags)
+					{
+						FindOrAddTagSource(nativeTag.ModuleName, GameplayTagSourceType.Native);
+						AddTagTableRow(nativeTag.GameplayTagTableRow, nativeTag.ModuleName);
+					}
+				}
+
+				FindOrAddTagSource(GameplayTagSource.NativeName, GameplayTagSourceType.Native);
 
 #if UNITY_EDITOR
 				mutableDefault.SortTags();
@@ -598,5 +625,63 @@ namespace GameplayTags
 				}
 			}
 		}
+
+		public GameplayTag AddNativeGameplayTag(string tagName, in string tagDevComment)
+		{
+			if (string.IsNullOrEmpty(tagName))
+			{
+				return new GameplayTag();
+			}
+
+			if (!DoneAddingNativeTags)
+			{
+				GameplayTag newTag = new(tagName);
+
+				AddTagTableRow(new GameplayTagTableRow(tagName, tagDevComment), GameplayTagSource.NativeName);
+
+				return newTag;
+			}
+
+			return new GameplayTag();
+		}
+
+		public void AddNativeGameplayTag(NativeGameplayTag tagSource)
+		{
+			GameplayTagSource nativeSource = FindOrAddTagSource(tagSource.ModuleName, GameplayTagSourceType.Native);
+			nativeSource.SourceTagList.GameplayTagList.Add(tagSource.GameplayTagTableRow);
+
+			AddTagTableRow(tagSource.GameplayTagTableRow, nativeSource.SourceName);
+
+			HandleGameplayTagTreeChanged(false);
+		}
+
+		public void RemoveNativeGameplayTag(NativeGameplayTag tagSource)
+		{
+
+			HandleGameplayTagTreeChanged(true);
+		}
+
+		public void BroadcastOnGameplayTagTreeChanged()
+		{
+
+		}
+
+		public void HandleGameplayTagTreeChanged(bool recreateTree)
+		{
+			if (recreateTree && !ShouldDeferGameplayTagTreeRebuilds)
+			{
+#if UNITY_EDITOR
+				EditorRefreshGameplayTagTree();
+				return;
+#endif
+				DestroyGameplayTagTree();
+				ConstructGameplayTagTree();
+			}
+			else
+			{
+				BroadcastOnGameplayTagTreeChanged();
+			}
+		}
+
 	}
 }
