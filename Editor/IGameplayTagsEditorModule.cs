@@ -1,7 +1,6 @@
-using GameplayTags;
-using System;
 using UnityEditor;
 using UnityEngine;
+using DesignPatterns;
 
 namespace GameplayTags.Editor
 {

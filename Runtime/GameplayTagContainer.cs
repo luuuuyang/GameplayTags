@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.Assertions;
 
 namespace GameplayTags
 {
@@ -434,8 +433,9 @@ namespace GameplayTags
 				ret = EvalExpr(tags);
 			}
 
-			Assert.IsTrue(CurStreamIdx == Query.QueryTokenStream.Count);
+			Debug.Assert(CurStreamIdx == Query.QueryTokenStream.Count);
 			return ret;
+
 		}
 
 		public void Read(GameplayTagQueryExpression e)
@@ -455,9 +455,10 @@ namespace GameplayTags
 					}
 				}
 
-				Assert.IsTrue(CurStreamIdx == Query.QueryTokenStream.Count);
+				Debug.Assert(CurStreamIdx == Query.QueryTokenStream.Count);
 			}
 		}
+
 
 		private void ReadExpr(GameplayTagQueryExpression e)
 		{
@@ -739,7 +740,7 @@ namespace GameplayTags
 						editableQuery.RootExpression = ReadEditableQueryExpr(editableQuery);
 					}
 				}
-				Assert.IsTrue(CurStreamIdx == Query.QueryTokenStream.Count);
+				Debug.Assert(CurStreamIdx == Query.QueryTokenStream.Count);
 			}
 
 			editableQuery.UserDescription = Query.UserDescription;
@@ -818,7 +819,7 @@ namespace GameplayTags
 			{
 				tags = (editableQueryExpr as EditableGameplayTagQueryExpression_NoTagsMatch).Tags;
 			}
-			Assert.IsTrue(tags is not null);
+			Debug.Assert(tags is not null);
 
 			if (tags is not null)
 			{
@@ -857,7 +858,7 @@ namespace GameplayTags
 			{
 				exprList = (editableQueryExpr as EditableGameplayTagQueryExpression_NoExprMatch).Expressions;
 			}
-			Assert.IsTrue(exprList != null);
+			Debug.Assert(exprList != null);
 
 			if (exprList != null)
 			{
@@ -988,7 +989,7 @@ namespace GameplayTags
 
 		public GameplayTag GetTagFromIndex(int tagIdx)
 		{
-			Assert.IsTrue(TagDictionary.IsValidIndex(tagIdx));
+			Debug.Assert(TagDictionary.IsValidIndex(tagIdx));
 			return TagDictionary[tagIdx];
 		}
 
@@ -1065,21 +1066,21 @@ namespace GameplayTags
 
 		public GameplayTagQueryExpression AddTag(GameplayTag tag)
 		{
-			Assert.IsTrue(UsesTagSet);
+			Debug.Assert(UsesTagSet);
 			TagSet.Add(tag);
 			return this;
 		}
 
 		public GameplayTagQueryExpression AddTags(GameplayTagContainer tags)
 		{
-			Assert.IsTrue(UsesTagSet);
+			Debug.Assert(UsesTagSet);
 			TagSet.AddRange(tags.GameplayTags);
 			return this;
 		}
 
 		public GameplayTagQueryExpression AddExpr(GameplayTagQueryExpression expr)
 		{
-			Assert.IsTrue(UsesExprSet);
+			Debug.Assert(UsesExprSet);
 			ExprSet.Add(expr);
 			return this;
 		}
@@ -1099,7 +1100,7 @@ namespace GameplayTags
 					foreach (GameplayTag tag in TagSet)
 					{
 						int tagIdx = tagDictionary.AddUnique(tag);
-						Assert.IsTrue(tagIdx <= 254);
+						Debug.Assert(tagIdx <= 254);
 						tokenStream.Add((byte)tagIdx);
 					}
 					break;
@@ -1173,7 +1174,7 @@ namespace GameplayTags
 			foreach (GameplayTag tag in tagsToEmit)
 			{
 				int tagIdx = tagDictionary.AddUnique(tag);
-				Assert.IsTrue(tagIdx <= 255);
+				Debug.Assert(tagIdx <= 255);
 				tokenStream.Add((byte)tagIdx);
 
 				if (debugString != null)

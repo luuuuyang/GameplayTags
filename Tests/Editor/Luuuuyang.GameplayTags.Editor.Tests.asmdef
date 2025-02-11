@@ -1,10 +1,12 @@
 {
     "name": "Luuuuyang.GameplayTags.Editor.Tests",
+    "rootNamespace": "",
     "references": [
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "Unity.PerformanceTesting",
-        "Luuuyang.GameplayTags"
+        "Luuuyang.GameplayTags",
+        "Luuuuyang.DesignPatterns"
     ],
     "includePlatforms": [
         "Editor"
