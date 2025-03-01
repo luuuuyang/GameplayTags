@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
+
 #if ODIN_INSPECTOR
 using Sirenix.OdinInspector;
 using Sirenix.OdinInspector.Editor;
@@ -11,16 +12,27 @@ using Sirenix.Utilities.Editor;
 
 namespace GameplayTags.Editor
 {
+    public enum GameplayTagPickerMode
+    {
+        SelectionMode,
+        ManagementMode,
+        HybridMode
+    }
+
     public class OdinGameplayTagPicker : OdinEditorWindow
     {
         public delegate void TagChangedEventHandler(in List<GameplayTagContainer> tagContainers);
 
         public delegate void GameplayTagAddedEventHandler(in string tagName, in string tagComment, in string tagSource);
 
+        public delegate void OnRefreshTagContainers(OdinGameplayTagPicker tagPicker);
+
         [HideInInspector]
         public TagChangedEventHandler OnTagChanged;
         [HideInInspector]
-        public GameplayTagAddedEventHandler OnGameplayTagAdded;
+        public GameplayTagAddedEventHandler onGameplayTagAdded;
+        [HideInInspector]
+        public OnRefreshTagContainers onRefreshTagContainers;
         [HideInInspector]
         public bool MultiSelect = true;
 
@@ -38,15 +50,19 @@ namespace GameplayTags.Editor
 
         [HideInInspector]
         public List<GameplayTagContainer> TagContainers = new();
+
         [HideInInspector]
         public List<GameplayTagNode> TagItems = new();
+
         [HideInInspector]
         public List<GameplayTagNode> CachedExpandedItems = new();
+
         [HideInInspector]
         public InspectorProperty Property;
         private GUIStyle iconStyle;
 
         bool NewTagWidgetVisible = false;
+        bool PersistExpansionChange = true;
 
         [SerializeField]
         [ShowIf("NewTagWidgetVisible")]
@@ -64,7 +80,7 @@ namespace GameplayTags.Editor
         [ValueDropdown(nameof(TagSourceOptions))]
         private string TagSource;
 
-        private List<string> TagSourceOptions = new() { "DefaultGameplayTags.asset" };
+        private List<string> TagSourceOptions = new();
 
         private bool CanSelectTags => !ReadOnly && (Mode == GameplayTagPickerMode.SelectionMode || Mode == GameplayTagPickerMode.HybridMode);
 
@@ -84,16 +100,43 @@ namespace GameplayTags.Editor
             window.Mode = mode;
             window.position = new Rect(buttonRect.x, buttonRect.y + buttonRect.height, 300, 400);
 
-            if (window.Property != null)
-            {
-                GetEditableTagContainersFromProperty(window.Property, window.TagContainers);
-            }
-            window.GetFilteredGameplayRootTags(window.TagItems);
-
-
             window.Show();
 
             return window;
+        }
+
+        protected override void Initialize()
+        {
+            base.Initialize();
+
+            PopulateTagSources();
+
+            if (Property != null)
+            {
+                GetEditableTagContainersFromProperty(Property, TagContainers);
+            }
+            GetFilteredGameplayRootTags(TagItems);
+        }
+
+        private void PopulateTagSources()
+        {
+            GameplayTagsManager manager = GameplayTagsManager.Instance;
+            TagSourceOptions.Clear();
+
+            string defaultSource = GameplayTagSource.DefaultName;
+
+            TagSourceOptions.Add(defaultSource);
+
+            List<GameplayTagSource> sources = new List<GameplayTagSource>();
+            manager.FindTagSourcesWithType(GameplayTagSourceType.TagList, ref sources);
+
+            foreach (GameplayTagSource source in sources)
+            {
+                if (source != null && source.SourceName != defaultSource)
+                {
+                    TagSourceOptions.Add(source.SourceName);
+                }
+            }
         }
 
         protected override void OnEnable()
@@ -186,7 +229,11 @@ namespace GameplayTags.Editor
                     if (node.ChildTagNodes.Count > 0)
                     {
                         EditorIcon icon = IsTagExpanded(node) ? EditorIcons.TriangleDown : EditorIcons.TriangleRight;
-                        SirenixEditorGUI.IconButton(icon, iconStyle);
+
+                        if (SirenixEditorGUI.IconButton(icon, iconStyle))
+                        {
+                            OnExpansionChanged(node, !IsTagExpanded(node));
+                        }
                     }
                     else
                     {
@@ -205,7 +252,10 @@ namespace GameplayTags.Editor
                     }
 
                     // 4. 标签名
-                    GUILayout.Label(node.CompleteTag.TagName);
+                    GUILayout.Label(node.SimpleTagName);
+
+                    // 5. 标签来源
+                    GUILayout.Label(node.SourceNames.Count > 0 ? node.SourceNames[0] : "", SirenixGUIStyles.RightAlignedGreyMiniLabel);
                 }
                 SirenixEditorGUI.EndIndentedHorizontal();
             }
@@ -215,7 +265,7 @@ namespace GameplayTags.Editor
             if (node.ChildTagNodes.Count > 0)
             {
                 EditorGUI.indentLevel++;
-                if (true)
+                if (IsTagExpanded(node))
                 {
                     foreach (GameplayTagNode child in node.ChildTagNodes)
                     {
@@ -347,16 +397,21 @@ namespace GameplayTags.Editor
 
         public bool IsTagExpanded(GameplayTagNode node)
         {
-            return true;
+            return CachedExpandedItems.Contains(node);
         }
 
-        public void SetTagNodeItemExpanded(GameplayTagNode node, bool expand)
+        private void OnExpansionChanged(GameplayTagNode item, bool isExpanded)
         {
-            if (node is not null)
+            if (PersistExpansionChange)
             {
-                foreach (var item in node.ChildTagNodes)
+                
+                if (isExpanded)
                 {
-                    SetTagNodeItemExpanded(item, expand);
+                    CachedExpandedItems.Add(item);
+                }
+                else
+                {
+                    CachedExpandedItems.Remove(item);
                 }
             }
         }
@@ -414,6 +469,8 @@ namespace GameplayTags.Editor
 
         private void CreateNewGameplayTag()
         {
+            GameplayTagsManager manager = GameplayTagsManager.Instance;
+
             if (TagSource is null)
             {
                 Debug.LogError("You must specify a source file for gameplay tags.");
@@ -429,7 +486,7 @@ namespace GameplayTags.Editor
                 return;
             }
 
-            if (!GameplayTagsManager.Instance.IsValidGameplayTagString(TagName, out string error, out string fixedString))
+            if (!manager.IsValidGameplayTagString(TagName, out string error, out string fixedString))
             {
                 Debug.LogError($"Invalid Gameplay Tag: {TagName}");
                 return;
@@ -437,7 +494,23 @@ namespace GameplayTags.Editor
 
             IGameplayTagsEditorModule.Instance.AddNewGameplayTagToINI(TagName, TagComment, TagSource);
 
-            OnGameplayTagAdded?.Invoke(TagName, TagComment, TagSource);
+            onGameplayTagAdded?.Invoke(TagName, TagComment, TagSource);
+        }
+
+        public void OnGameplayTagAdded(in string tagName, in string tagComment, in string tagSource)
+        {
+            GameplayTagsManager manager = GameplayTagsManager.Instance;
+
+            GameplayTagNode tagNode = manager.FindTagNode(tagName);
+            GameplayTagNode parentTagNode = tagNode;
+        }
+
+        public void RefreshTags()
+        {
+            GameplayTagsManager manager = GameplayTagsManager.Instance;
+            manager.GetFilteredGameplayRootTags(TagItems);
+
+            onRefreshTagContainers?.Invoke(this);
         }
     }
 }

@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
+using System.IO;
+using Sirenix.Utilities;
 
 namespace GameplayTags
 {
@@ -33,6 +35,27 @@ namespace GameplayTags
 		TagList,
 		DataTable,
 		Invalid,
+	}
+
+	public class GameplayTagSearchPathInfo
+	{
+		public List<string> SourcesInPath = new();
+		public List<string> TagIniList = new();
+		public bool WasSearched;
+		public bool WasAddedToTree;
+
+		public void Reset()
+		{
+			SourcesInPath.Clear();
+			TagIniList.Clear();
+			WasSearched = false;
+			WasAddedToTree = false;
+		}
+
+		public bool IsValid()
+		{
+			return WasSearched && WasAddedToTree;
+		}
 	}
 
 	public class GameplayTagNode
@@ -111,6 +134,9 @@ namespace GameplayTags
 	public class GameplayTagsManager : Singleton<GameplayTagsManager>
 	{
 		private HashSet<string> LegacyNativeTags = new();
+
+		private Dictionary<string, GameplayTagSearchPathInfo> RegisteredSearchPaths = new();
+
 		private GameplayTagNode GameplayRootTag;
 
 		private Dictionary<GameplayTag, GameplayTagNode> GameplayTagNodeMap = new();
@@ -124,6 +150,8 @@ namespace GameplayTags
 		private bool ShouldDeferGameplayTagTreeRebuilds;
 
 		private bool DoneAddingNativeTags;
+
+		private bool ShouldAllowUnloadingTags;
 
 		public override void InitializeSingleton()
 		{
@@ -146,6 +174,11 @@ namespace GameplayTags
 
 		public void EditorRefreshGameplayTagTree()
 		{
+			foreach (var pair in RegisteredSearchPaths)
+			{
+				pair.Value.WasSearched = false;
+			}
+
 			DestroyGameplayTagTree();
 			ConstructGameplayTagTree();
 		}
@@ -345,7 +378,7 @@ namespace GameplayTags
 			return null;
 		}
 
-		public GameplayTagSource FindOrAddTagSource(string tagSourceName, GameplayTagSourceType sourceType)
+		public GameplayTagSource FindOrAddTagSource(string tagSourceName, GameplayTagSourceType sourceType, in string rootDirToUse = null)
 		{
 			GameplayTagSource foundSource = FindTagSource(tagSourceName);
 			if (foundSource is not null)
@@ -372,6 +405,19 @@ namespace GameplayTags
 			else if (sourceType == GameplayTagSourceType.DefaultTagList)
 			{
 				newSource.SourceTagList = AssetDatabase.LoadAssetAtPath<GameplayTagsList>("Packages/com.luuuuyang.gameplaytags/Editor/Config/DefaultGameplayTags.asset");
+			}
+			else if (sourceType == GameplayTagSourceType.TagList)
+			{
+				newSource.SourceTagList = ScriptableObject.CreateInstance<GameplayTagsList>();
+				if (string.IsNullOrEmpty(rootDirToUse))
+				{
+					newSource.SourceTagList.ConfigFileName = tagSourceName;
+				}
+				else
+				{
+					newSource.SourceTagList.ConfigFileName = rootDirToUse + "/" + tagSourceName;
+					RegisteredSearchPaths.TryAdd(rootDirToUse, new GameplayTagSearchPathInfo());
+				}
 			}
 
 			return newSource;
@@ -414,6 +460,17 @@ namespace GameplayTags
 				{
 					AddTagTableRow(tableRow, TagSource);
 				}
+
+				string defaultPath = "Assets";
+				AddTagIniSearchPath(defaultPath);
+
+				foreach (var pair in RegisteredSearchPaths)
+				{
+					if (!pair.Value.IsValid())
+					{
+						AddTagIniSearchPath(pair.Key);
+					}
+				}
 			}
 		}
 
@@ -425,6 +482,11 @@ namespace GameplayTags
 				GameplayRootTag = null;
 
 				GameplayTagNodeMap.Clear();
+			}
+
+			foreach (var pair in RegisteredSearchPaths)
+			{
+				pair.Value.WasAddedToTree = false;
 			}
 		}
 
@@ -684,5 +746,115 @@ namespace GameplayTags
 			}
 		}
 
+		public void GetTagSourceSearchPaths(ref List<string> outPaths)
+		{
+			outPaths.Clear();
+			outPaths.AddRange(RegisteredSearchPaths.Keys.ToList());
+		}
+
+		public void FindTagSourcesWithType(GameplayTagSourceType sourceType, ref List<GameplayTagSource> outArray)
+		{
+			foreach (var pair in TagSources)
+			{
+				if (pair.Value.SourceType == sourceType)
+				{
+					outArray.Add(pair.Value);
+				}
+			}
+		}
+
+		public void AddTagIniSearchPath(in string rootDir)
+		{
+			if (!RegisteredSearchPaths.TryGetValue(rootDir, out GameplayTagSearchPathInfo pathInfo))
+			{
+				pathInfo = new GameplayTagSearchPathInfo();
+				RegisteredSearchPaths.Add(rootDir, pathInfo);
+			}
+
+			if (!pathInfo.WasSearched)
+			{
+				pathInfo.Reset();
+
+				string[] filesInDictionary = Directory.GetFiles(rootDir, "*.asset", SearchOption.TopDirectoryOnly);
+
+				if (filesInDictionary.Length > 0)
+				{
+					filesInDictionary.Sort();
+
+					foreach (string iniFilePath in filesInDictionary)
+					{
+						string tagSource = Path.GetFileNameWithoutExtension(iniFilePath);
+						pathInfo.SourcesInPath.Add(tagSource);
+						pathInfo.TagIniList.Add(iniFilePath);
+					}
+				}
+
+				pathInfo.WasSearched = true;
+			}
+
+			if (!pathInfo.WasAddedToTree)
+			{
+				AddTagsFromAdditionalLooseIniFiles(pathInfo.TagIniList);
+
+				pathInfo.WasAddedToTree = true;
+
+				HandleGameplayTagTreeChanged(false);
+			}
+		}
+
+		public void AddTagsFromAdditionalLooseIniFiles(in List<string> iniFileList)
+		{
+			foreach (string iniFilePath in iniFileList)
+			{
+				string tagSource = Path.GetFileNameWithoutExtension(iniFilePath);
+
+				if (RegisteredSearchPaths.ContainsKey(iniFilePath))
+				{
+					continue;
+				}
+
+				GameplayTagSource foundSource = FindOrAddTagSource(tagSource, GameplayTagSourceType.TagList);
+
+				Debug.Log($"Loading Tag File: {iniFilePath}");
+
+				if (foundSource != null && foundSource.SourceTagList != null)
+				{
+					foundSource.SourceTagList.ConfigFileName = iniFilePath;
+					foundSource.SourceTagList = AssetDatabase.LoadAssetAtPath<GameplayTagsList>(iniFilePath);
+				}
+
+#if UNITY_EDITOR
+				foundSource.SourceTagList.SortTags();
+#endif
+				foreach (GameplayTagTableRow tableRow in foundSource.SourceTagList.GameplayTagList)
+				{
+					AddTagTableRow(tableRow, tagSource);
+				}
+			}
+		}
+
+		public bool RemoveTagIniSearchPath(in string rootDir)
+		{
+			if (!ShouldUnloadTags())
+			{
+				return false;
+			}
+
+			if (RegisteredSearchPaths.TryGetValue(rootDir, out GameplayTagSearchPathInfo pathInfo))
+			{
+				RegisteredSearchPaths.Remove(rootDir);
+
+				HandleGameplayTagTreeChanged(true);
+
+				return true;
+			}
+
+			return false;
+		}
+
+		public bool ShouldUnloadTags()
+		{
+			return ShouldAllowUnloadingTags;
+		}
 	}
 }

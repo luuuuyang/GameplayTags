@@ -8,12 +8,14 @@ namespace GameplayTags.Editor
     {
         public bool AddNewGameplayTagToINI(in string newTag, in string comment, in string tagSourceName)
         {
+            GameplayTagsManager manager = GameplayTagsManager.Instance;
+
             if (string.IsNullOrEmpty(newTag))
             {
                 return false;
             }
 
-            if (!GameplayTagsManager.Instance.IsValidGameplayTagString(newTag, out string error, out string fixedString))
+            if (!manager.IsValidGameplayTagString(newTag, out string error, out string fixedString))
             {
                 Debug.LogError($"Invalid Gameplay Tag: {newTag}");
                 return false;
@@ -21,7 +23,7 @@ namespace GameplayTags.Editor
 
             string newTagName = newTag;
 
-            if (GameplayTagsManager.Instance.IsDictionaryTag(newTagName))
+            if (manager.IsDictionaryTag(newTagName))
             {
                 Debug.LogError($"Dictionary Tag: {newTagName} is not allowed to be added to the INI file");
                 return false;
@@ -32,28 +34,39 @@ namespace GameplayTags.Editor
 
             while (wasSplit)
             {
-                if (GameplayTagsManager.Instance.IsDictionaryTag(ancestorTag))
+                if (manager.IsDictionaryTag(ancestorTag))
                 {
                     ancestorTag = ancestorTag.Substring(0, ancestorTag.LastIndexOf('.'));
                 }
             }
 
-            GameplayTagSource tagSource = GameplayTagsManager.Instance.FindTagSource(tagSourceName);
+            GameplayTagSource tagSource = manager.FindTagSource(tagSourceName);
 
             if (tagSource is null)
             {
-                tagSource = GameplayTagsManager.Instance.FindOrAddTagSource(tagSourceName, GameplayTagSourceType.TagList);
+                tagSource = manager.FindOrAddTagSource(tagSourceName, GameplayTagSourceType.TagList);
             }
 
             bool success = false;
             if (tagSource is not null)
             {
+                Object tagListObj = null;
+                string configFileName = null;
+
                 if (tagSource.SourceTagList is not null)
                 {
                     GameplayTagsList tagList = tagSource.SourceTagList;
+                    tagListObj = tagList;
                     tagList.GameplayTagList.AddUnique(new GameplayTagTableRow(newTag, comment));
                     tagList.SortTags();
+                    configFileName = tagList.ConfigFileName;
                     success = true;
+                }
+
+                if (!AssetDatabase.AssetPathExists(configFileName))
+                {
+                    AssetDatabase.CreateAsset(tagListObj, configFileName);
+                    AssetDatabase.SaveAssets();
                 }
             }
 
@@ -64,7 +77,7 @@ namespace GameplayTags.Editor
             }
 
             {
-                GameplayTagsManager.Instance.EditorRefreshGameplayTagTree();
+                manager.EditorRefreshGameplayTagTree();
             }
 
             return true;
@@ -96,6 +109,30 @@ namespace GameplayTags.Editor
             }
 
             return false;
+        }
+
+        public virtual bool AddNewGameplayTagSource(in string newTagSource, in string rootDirToUse)
+        {
+            GameplayTagsManager manager = GameplayTagsManager.Instance;
+
+            if (string.IsNullOrEmpty(newTagSource))
+            {
+                return false;
+            }
+
+            string tagSourceName;
+            if (newTagSource.EndsWith(".asset"))
+            {
+                tagSourceName = newTagSource;
+            }
+            else
+            {
+                tagSourceName = newTagSource + ".asset";
+            }
+
+            manager.FindOrAddTagSource(tagSourceName, GameplayTagSourceType.TagList, rootDirToUse);
+            
+            return true;
         }
     }
 }

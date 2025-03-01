@@ -286,7 +286,6 @@ namespace GameplayTags
 				return;
 			}
 
-
 			int oldTagCount = GameplayTags.Count;
 			GameplayTags.Capacity = oldTagCount + other.GameplayTags.Count;
 			foreach (GameplayTag otherTag in other)

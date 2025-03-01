@@ -74,7 +74,7 @@ namespace GameplayTags.Editor
             CachedTagContainers.Reset();
             TagsToEdit.Reset();
 
-            GameplayTagPicker.EnumerateEditableTagContainersFromProperty(Property, (tagContainer) =>
+            OdinGameplayTagPicker.EnumerateEditableTagContainersFromProperty(Property, (tagContainer) =>
             {
                 CachedTagContainers.Add(tagContainer);
                 foreach (GameplayTag tag in tagContainer)

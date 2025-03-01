@@ -18,13 +18,7 @@ namespace GameplayTags.Editor
 
             if (SirenixEditorGUI.Button(string.IsNullOrEmpty(ValueEntry.SmartValue.TagName) ? "None" : ValueEntry.SmartValue.TagName, ButtonSizes.Medium))
             {
-                var buttonRect = GUILayoutUtility.GetLastRect();
-                PopupWindow.Show(buttonRect, new GameplayTagPicker
-                {
-                    MultiSelect = false,
-                    Property = Property,
-                    OnTagChanged = OnTagSelected
-                });
+                OdinGameplayTagPicker.ShowWindow(EditorGUILayout.GetControlRect(), false, Property, OnTagSelected, new List<GameplayTagContainer>());
             }
 
             if (SirenixEditorGUI.IconButton(EditorIcons.X))

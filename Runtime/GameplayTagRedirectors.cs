@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 
 namespace GameplayTags
 {
+    [Serializable]
     public struct GameplayTagRedirect
     {
         public string OldTagName;
