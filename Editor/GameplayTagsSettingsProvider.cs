@@ -7,6 +7,7 @@ namespace GameplayTags.Editor
     public class GameplayTagSettingsProvider : SettingsProvider
     {
         private SerializedObject SerializedObject;
+        
         public GameplayTagSettingsProvider(string path, SettingsScope scope = SettingsScope.User) : base(path, scope)
         {
         }
@@ -20,6 +21,7 @@ namespace GameplayTags.Editor
         public override void OnGUI(string searchContext)
         {
             EditorGUILayout.PropertyField(SerializedObject.FindProperty("ImportTagsFromConfig"));
+            EditorGUILayout.PropertyField(SerializedObject.FindProperty("WarnOnInvalidTags"));
             EditorGUILayout.PropertyField(SerializedObject.FindProperty("GameplayTagRedirects"));
             EditorGUILayout.PropertyField(SerializedObject.FindProperty("InvalidTagCharacters"));
 

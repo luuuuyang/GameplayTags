@@ -6,7 +6,7 @@ using UnityEngine;
 namespace GameplayTags
 {
 	[Serializable]
-	public class GameplayTagContainer : IEquatable<GameplayTagContainer>
+	public class GameplayTagContainer : IEquatable<GameplayTagContainer>/*, ISerializationCallbackReceiver*/
 	{
 		public static readonly GameplayTagContainer EmptyContainer = new();
 
@@ -73,6 +73,16 @@ namespace GameplayTags
 			ParentTags.Clear();
 			ParentTags.AddRange(other.ParentTags);
 		}
+
+		// public void OnBeforeSerialize()
+		// {
+		// }
+
+		// public void OnAfterDeserialize()
+		// {
+		// 	GameplayTagsManager.Instance.GameplayTagContainerLoaded(this, null);
+		// 	FillParentTags();
+		// }
 
 		public static bool operator ==(GameplayTagContainer a, GameplayTagContainer b)
 		{

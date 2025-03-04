@@ -4,11 +4,9 @@ using UnityEngine;
 
 namespace GameplayTags
 {
-	
-
 	[Serializable]
-	public struct GameplayTag : IComparable<GameplayTag>, IEquatable<GameplayTag>, ICloneable
-	{
+	public struct GameplayTag : IComparable<GameplayTag>, IEquatable<GameplayTag>, ICloneable/*, ISerializationCallbackReceiver*/
+    {
 		public string TagName;
 
 		public static readonly GameplayTag EmptyTag;
@@ -16,7 +14,16 @@ namespace GameplayTags
 		public GameplayTag(in string tagName)
 		{
 			TagName = tagName;
-		}
+		}	
+
+		// public void OnBeforeSerialize()
+		// {
+		// }
+
+		// public void OnAfterDeserialize()
+		// {
+		// 	GameplayTagsManager.Instance.SingleGameplayTagLoaded(ref this, null);
+		// }
 
 		public readonly bool IsValid()
 		{

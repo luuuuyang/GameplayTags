@@ -8,10 +8,13 @@ namespace GameplayTags
     [CreateAssetMenu(fileName = "GameplayTagSettings", menuName = "GameplayAbilities/GameplayTagSettings")]
     public class GameplayTagSettings : GameplayTagsList
     {
-        public const string SettingsPath = "Packages/com.luuuuyang.gameplaytags/Runtime/GameplayTagSettings.asset";
+        public const string SettingsPath = "Packages/com.luuuuyang.gameplaytags/Editor/Config/DefaultGameplayTags.asset";
         
         [ReadOnly]
         public bool ImportTagsFromConfig = true;
+
+        [ReadOnly]
+        public bool WarnOnInvalidTags = true;
 
         [ReadOnly]
         public List<GameplayTagRedirect> GameplayTagRedirects = new();

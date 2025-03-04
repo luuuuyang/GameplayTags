@@ -14,9 +14,6 @@ public class OdinAddNewGameplayTagSource : OdinEditorWindow
     [ValueDropdown("TagRoots", FlattenTreeView = true)]
     public string TagRoot;
 
-    [FolderPath]
-    public string Path;
-
     private OnGameplayTagSourceAdded onGameplayTagSourceAdded;
     private List<string> TagRoots = new();
     private string DefaultNewName;
@@ -47,6 +44,5 @@ public class OdinAddNewGameplayTagSource : OdinEditorWindow
     private void OnAddNewSourceButtonPressed()
     {
         IGameplayTagsEditorModule.Instance.AddNewGameplayTagSource(Name, TagRoot);
-        // Debug.Log($"{Path}");
     }
 }

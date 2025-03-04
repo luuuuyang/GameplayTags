@@ -22,69 +22,73 @@ namespace GameplayTags.Editor
     public class OdinGameplayTagPicker : OdinEditorWindow
     {
         public delegate void TagChangedEventHandler(in List<GameplayTagContainer> tagContainers);
-
         public delegate void GameplayTagAddedEventHandler(in string tagName, in string tagComment, in string tagSource);
-
         public delegate void OnRefreshTagContainers(OdinGameplayTagPicker tagPicker);
 
-        [HideInInspector]
-        public TagChangedEventHandler OnTagChanged;
-        [HideInInspector]
-        public GameplayTagAddedEventHandler onGameplayTagAdded;
-        [HideInInspector]
-        public OnRefreshTagContainers onRefreshTagContainers;
-        [HideInInspector]
-        public bool MultiSelect = true;
-
-        [HideInInspector]
-        public bool ReadOnly = false;
-
-        [HideInInspector]
-        public GameplayTagPickerMode Mode = GameplayTagPickerMode.SelectionMode;
-
-        [HideInInspector]
-        public string SearchText = "";
-
-        [HideInInspector]
-        public Vector2 ScrollPosition;
-
-        [HideInInspector]
-        public List<GameplayTagContainer> TagContainers = new();
-
-        [HideInInspector]
-        public List<GameplayTagNode> TagItems = new();
-
-        [HideInInspector]
-        public List<GameplayTagNode> CachedExpandedItems = new();
-
-        [HideInInspector]
-        public InspectorProperty Property;
+        private TagChangedEventHandler OnTagChanged;
+        private OnRefreshTagContainers onRefreshTagContainers;
+        private bool MultiSelect = true;
+        private bool ReadOnly = false;
+        private GameplayTagPickerMode Mode = GameplayTagPickerMode.SelectionMode;
+        private string SearchText = "";
+        private Vector2 ScrollPosition;
+        private List<GameplayTagContainer> TagContainers = new();
+        private List<GameplayTagNode> TagItems = new();
+        private List<GameplayTagNode> CachedExpandedItems = new();
+        private InspectorProperty Property;
         private GUIStyle iconStyle;
-
-        bool NewTagWidgetVisible = false;
-        bool PersistExpansionChange = true;
+        private bool NewTagWidgetVisible = false;
+        private bool PersistExpansionChange = true;
+        private List<string> TagSourceOptions = new();
+        private bool CanSelectTags => !ReadOnly && (Mode == GameplayTagPickerMode.SelectionMode || Mode == GameplayTagPickerMode.HybridMode);
 
         [SerializeField]
         [ShowIf("NewTagWidgetVisible")]
-        [PropertyOrder(3)]
         private string Name;
 
         [SerializeField]
         [ShowIf("NewTagWidgetVisible")]
-        [PropertyOrder(3)]
         private string Comment;
 
         [SerializeField]
         [ShowIf("NewTagWidgetVisible")]
-        [PropertyOrder(3)]
         [ValueDropdown(nameof(TagSourceOptions))]
         private string TagSource;
 
-        private List<string> TagSourceOptions = new();
+        [Button(Name = "Add New Tag", Stretch = false, ButtonAlignment = 1f)]
+        [ShowIf("NewTagWidgetVisible")]
+        private void OnAddNewTagButtonPressed()
+        {
+            CreateNewGameplayTag();
+        }
 
-        private bool CanSelectTags => !ReadOnly && (Mode == GameplayTagPickerMode.SelectionMode || Mode == GameplayTagPickerMode.HybridMode);
+        [Button(Icon = SdfIconType.X, IconAlignment = IconAlignment.LeftOfText, Name = "Clear Selection")]
+        [ShowIf("Mode", GameplayTagPickerMode.SelectionMode)]
+        private void OnClearAllClicked()
+        {
+            foreach (GameplayTagContainer container in TagContainers)
+            {
+                container.Reset();
+            }
 
-        public static OdinGameplayTagPicker ShowWindow(
+            OnContainersChanged();
+        }
+
+        [Button(Icon = SdfIconType.Gear, IconAlignment = IconAlignment.LeftOfText, Name = "Manage Gameplay Tags...")]
+        [ShowIf("Mode", GameplayTagPickerMode.SelectionMode)]
+        private void OnManageTagsClicked()
+        {
+            var window = CreateInstance<OdinGameplayTagPicker>();
+            if (window.Property != null)
+            {
+                GetEditableTagContainersFromProperty(window.Property, window.TagContainers);
+            }
+            window.GetFilteredGameplayRootTags(window.TagItems);
+            window.Mode = GameplayTagPickerMode.ManagementMode;
+            window.Show();
+        }
+
+        public static void ShowWindow(
             Rect buttonRect,
             bool multiSelect,
             InspectorProperty property,
@@ -92,7 +96,9 @@ namespace GameplayTags.Editor
             List<GameplayTagContainer> tagContainers,
             GameplayTagPickerMode mode = GameplayTagPickerMode.SelectionMode)
         {
-            var window = CreateInstance<OdinGameplayTagPicker>();
+            Debug.Log("ShowWindow");
+            OdinGameplayTagPicker window = GetWindow<OdinGameplayTagPicker>();
+            Debug.Log("ShowWindow2");
             window.MultiSelect = multiSelect;
             window.Property = property;
             window.OnTagChanged = callback;
@@ -101,21 +107,21 @@ namespace GameplayTags.Editor
             window.position = new Rect(buttonRect.x, buttonRect.y + buttonRect.height, 300, 400);
 
             window.Show();
-
-            return window;
         }
 
-        protected override void Initialize()
+        protected override void OnEnable()
         {
-            base.Initialize();
+            base.OnEnable();
 
-            PopulateTagSources();
+            titleContent = new GUIContent("Select Tags");
 
-            if (Property != null)
-            {
-                GetEditableTagContainersFromProperty(Property, TagContainers);
-            }
-            GetFilteredGameplayRootTags(TagItems);
+            // 初始化样式
+            iconStyle = new GUIStyle() { margin = new RectOffset(5, 0, 4, 0) };
+        }
+
+        private void Update()
+        {
+            Debug.Log("Update");
         }
 
         private void PopulateTagSources()
@@ -139,16 +145,43 @@ namespace GameplayTags.Editor
             }
         }
 
-        protected override void OnEnable()
+        [OnInspectorInit]
+        private void Init()
         {
-            base.OnEnable();
-            titleContent = new GUIContent("Select Tags");
+            PopulateTagSources();
 
-            // 初始化样式
-            iconStyle = new GUIStyle() { margin = new RectOffset(5, 0, 4, 0) };
+            if (Property != null)
+            {
+                GetEditableTagContainersFromProperty(Property, TagContainers);
+            }
+
+            GameplayTagsManager.OnEditorRefreshGameplayTagTree += () => EditorApplication.delayCall += RefreshTags;
+
+            GetFilteredGameplayRootTags(TagItems);
         }
 
-        [PropertyOrder(4)]
+        [OnInspectorGUI]
+        private void DrawToolbar()
+        {
+            SirenixEditorGUI.BeginHorizontalToolbar();
+            {
+                if (SirenixEditorGUI.IconButton(EditorIcons.Plus, 18, 18, "Add New GameplayTag"))
+                {
+                    NewTagWidgetVisible = !NewTagWidgetVisible;
+                }
+
+                // 搜索框
+                var newSearchText = SirenixEditorGUI.ToolbarSearchField(SearchText);
+                if (newSearchText != SearchText)
+                {
+                    SearchText = newSearchText;
+                }
+
+                SirenixEditorGUI.IconButton(EditorIcons.Pen);
+            }
+            SirenixEditorGUI.EndHorizontalToolbar();
+        }
+
         [OnInspectorGUI]
         private void DrawTagTree()
         {
@@ -195,33 +228,20 @@ namespace GameplayTags.Editor
             GameplayTagsManager.Instance.GetFilteredGameplayRootTags(nodes);
         }
 
-        [PropertyOrder(2)]
-        [OnInspectorGUI]
-        private void DrawToolbar()
-        {
-            SirenixEditorGUI.BeginHorizontalToolbar();
-            {
-                if (SirenixEditorGUI.IconButton(EditorIcons.Plus, 18, 18, "Add New GameplayTag"))
-                {
-                    NewTagWidgetVisible = !NewTagWidgetVisible;
-                }
-
-                // 搜索框
-                var newSearchText = SirenixEditorGUI.ToolbarSearchField(SearchText);
-                if (newSearchText != SearchText)
-                {
-                    SearchText = newSearchText;
-                }
-
-                SirenixEditorGUI.IconButton(EditorIcons.Pen);
-            }
-            SirenixEditorGUI.EndHorizontalToolbar();
-        }
-
         private void DrawNode(GameplayTagNode node)
         {
-            SirenixEditorGUI.BeginListItem();
+            Rect rect = SirenixEditorGUI.BeginListItem();
             {
+                // 检测右键点击
+                if (Event.current.type == EventType.MouseDown && Event.current.button == 1)
+                {
+                    if (rect.Contains(Event.current.mousePosition))
+                    {
+                        ShowContextMenu(node);
+                        Event.current.Use(); // 标记事件已处理
+                    }
+                }
+
                 // 1. 开始水平布局
                 SirenixEditorGUI.BeginIndentedHorizontal();
                 {
@@ -255,7 +275,7 @@ namespace GameplayTags.Editor
                     GUILayout.Label(node.SimpleTagName);
 
                     // 5. 标签来源
-                    GUILayout.Label(node.SourceNames.Count > 0 ? node.SourceNames[0] : "", SirenixGUIStyles.RightAlignedGreyMiniLabel);
+                    GUILayout.Label(node.SourceNames.Count > 0 ? node.SourceNames[0] : "", node.IsExplicitTag ? SirenixGUIStyles.RightAlignedWhiteMiniLabel : SirenixGUIStyles.RightAlignedGreyMiniLabel);
                 }
                 SirenixEditorGUI.EndIndentedHorizontal();
             }
@@ -276,7 +296,7 @@ namespace GameplayTags.Editor
             }
         }
 
-        public void OnTagChecked(GameplayTagNode nodeChecked)
+        private void OnTagChecked(GameplayTagNode nodeChecked)
         {
             foreach (GameplayTagContainer container in TagContainers)
             {
@@ -304,7 +324,7 @@ namespace GameplayTags.Editor
             OnContainersChanged();
         }
 
-        public void OnTagUnchecked(GameplayTagNode nodeUnchecked)
+        private void OnTagUnchecked(GameplayTagNode nodeUnchecked)
         {
             if (nodeUnchecked is not null)
             {
@@ -340,7 +360,7 @@ namespace GameplayTags.Editor
             }
         }
 
-        public void UncheckChildren(GameplayTagNode nodeUnchecked, GameplayTagContainer editableContainer)
+        private void UncheckChildren(GameplayTagNode nodeUnchecked, GameplayTagContainer editableContainer)
         {
             GameplayTag gameplayTag = nodeUnchecked.CompleteTag;
             editableContainer.RemoveTag(gameplayTag);
@@ -351,7 +371,7 @@ namespace GameplayTags.Editor
             }
         }
 
-        public void OnTagCheckStatusChanged(bool newValue, GameplayTagNode nodeChanged)
+        private void OnTagCheckStatusChanged(bool newValue, GameplayTagNode nodeChanged)
         {
             if (newValue == true)
             {
@@ -363,7 +383,7 @@ namespace GameplayTags.Editor
             }
         }
 
-        public bool IsTagChecked(GameplayTagNode node)
+        private bool IsTagChecked(GameplayTagNode node)
         {
             int numValidAssets = 0;
             int numAssetsTagIsAppliedTo = 0;
@@ -395,7 +415,7 @@ namespace GameplayTags.Editor
             return false;
         }
 
-        public bool IsTagExpanded(GameplayTagNode node)
+        private bool IsTagExpanded(GameplayTagNode node)
         {
             return CachedExpandedItems.Contains(node);
         }
@@ -404,7 +424,7 @@ namespace GameplayTags.Editor
         {
             if (PersistExpansionChange)
             {
-                
+
                 if (isExpanded)
                 {
                     CachedExpandedItems.Add(item);
@@ -416,7 +436,7 @@ namespace GameplayTags.Editor
             }
         }
 
-        public void OnContainersChanged()
+        private void OnContainersChanged()
         {
             if (Property != null && MultiSelect)
             {
@@ -429,42 +449,6 @@ namespace GameplayTags.Editor
             Property.ValueEntry.ApplyChanges();
 
             OnTagChanged?.Invoke(TagContainers);
-        }
-
-        [PropertyOrder(0)]
-        [Button(Icon = SdfIconType.X, IconAlignment = IconAlignment.LeftOfText, Name = "Clear Selection")]
-        [ShowIf("Mode", GameplayTagPickerMode.SelectionMode)]
-        private void OnClearAllClicked()
-        {
-            foreach (GameplayTagContainer container in TagContainers)
-            {
-                container.Reset();
-            }
-
-            OnContainersChanged();
-        }
-
-        [PropertyOrder(1)]
-        [Button(Icon = SdfIconType.Gear, IconAlignment = IconAlignment.LeftOfText, Name = "Manage Gameplay Tags...")]
-        [ShowIf("Mode", GameplayTagPickerMode.SelectionMode)]
-        private void OnManageTagsClicked()
-        {
-            var window = CreateInstance<OdinGameplayTagPicker>();
-            if (window.Property != null)
-            {
-                GetEditableTagContainersFromProperty(window.Property, window.TagContainers);
-            }
-            window.GetFilteredGameplayRootTags(window.TagItems);
-            window.Mode = GameplayTagPickerMode.ManagementMode;
-            window.Show();
-        }
-
-        [PropertyOrder(3)]
-        [Button(Name = "Add New Tag", Stretch = false, ButtonAlignment = 1f)]
-        [ShowIf("NewTagWidgetVisible")]
-        private void OnAddNewTagButtonPressed()
-        {
-            CreateNewGameplayTag();
         }
 
         private void CreateNewGameplayTag()
@@ -494,23 +478,86 @@ namespace GameplayTags.Editor
 
             IGameplayTagsEditorModule.Instance.AddNewGameplayTagToINI(TagName, TagComment, TagSource);
 
-            onGameplayTagAdded?.Invoke(TagName, TagComment, TagSource);
+            OnGameplayTagAdded(TagName, TagComment, TagSource);
         }
 
-        public void OnGameplayTagAdded(in string tagName, in string tagComment, in string tagSource)
+        private void OnGameplayTagAdded(in string tagName, in string tagComment, in string tagSource)
         {
             GameplayTagsManager manager = GameplayTagsManager.Instance;
 
             GameplayTagNode tagNode = manager.FindTagNode(tagName);
             GameplayTagNode parentTagNode = tagNode;
+
+            while (parentTagNode is not null)
+            {
+                CachedExpandedItems.Add(parentTagNode);
+
+                parentTagNode = parentTagNode.ParentTagNode;
+            }
+
+            RefreshTags();
         }
 
-        public void RefreshTags()
+        private void RefreshTags()
         {
             GameplayTagsManager manager = GameplayTagsManager.Instance;
             manager.GetFilteredGameplayRootTags(TagItems);
 
             onRefreshTagContainers?.Invoke(this);
+        }
+
+        private void ShowContextMenu(GameplayTagNode node)
+        {
+            GenericMenu menu = new GenericMenu();
+
+            // 添加菜单项
+            menu.AddItem(new GUIContent("Rename"), false, () => OnRenameTag(node));
+            menu.AddItem(new GUIContent("Delete"), false, () => OnDeleteTag(node));
+            menu.AddSeparator("");
+            menu.AddItem(new GUIContent("Copy Tag Name"), false, () => OnCopyTagName(node));
+
+            // 显示菜单
+            menu.ShowAsContext();
+        }
+
+        private void OnRenameTag(GameplayTagNode node)
+        {
+            OdinRenameGameplayTagWindow.ShowWindow(node, OnGameplayTagRenamed);
+        }
+
+        private void OnDeleteTag(GameplayTagNode node)
+        {
+            if (node is not null)
+            {
+                IGameplayTagsEditorModule tagsEditor = IGameplayTagsEditorModule.Instance;
+
+                bool tagRemoved = false;
+                if (Mode == GameplayTagPickerMode.HybridMode)
+                {
+                    foreach (GameplayTagContainer container in TagContainers)
+                    {
+                        tagRemoved |= container.RemoveTag(node.CompleteTag);
+
+                    }
+                }
+
+                bool deleted = tagsEditor.DeleteTagFromINI(node);
+
+                if (tagRemoved || deleted)
+                {
+                    OnTagChanged?.Invoke(TagContainers);
+                }
+            }
+        }
+
+        private void OnCopyTagName(GameplayTagNode node)
+        {
+            Debug.Log("Copy Tag Name");
+        }
+
+        private void OnGameplayTagRenamed(string oldName, string newName)
+        {
+            OnTagChanged?.Invoke(TagContainers);
         }
     }
 }

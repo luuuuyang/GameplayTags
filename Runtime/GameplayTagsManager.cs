@@ -11,7 +11,7 @@ using Sirenix.Utilities;
 namespace GameplayTags
 {
 	[Serializable]
-	public struct GameplayTagTableRow : IComparable<GameplayTagTableRow>
+	public class GameplayTagTableRow : IComparable<GameplayTagTableRow>
 	{
 		public string Tag;
 		public string DevComment;
@@ -22,9 +22,40 @@ namespace GameplayTags
 			DevComment = devComment;
 		}
 
+		public static bool operator ==(GameplayTagTableRow a, GameplayTagTableRow b)
+		{
+			return a.Tag == b.Tag;
+		}
+
+		public static bool operator !=(GameplayTagTableRow a, GameplayTagTableRow b)
+		{
+			return !(a == b);
+		}
+
 		public int CompareTo(GameplayTagTableRow other)
 		{
 			return string.Compare(Tag, other.Tag, StringComparison.Ordinal);
+		}
+	}
+
+	[Serializable]
+	public class RestrictedGameplayTagTableRow : GameplayTagTableRow
+	{
+		public bool AllowNonRestrictedChildren;
+
+		public RestrictedGameplayTagTableRow(string tag, string devComment = "", bool allowNonRestrictedChildren = false) : base(tag, devComment)
+		{
+			AllowNonRestrictedChildren = allowNonRestrictedChildren;
+		}
+
+		public static bool operator ==(RestrictedGameplayTagTableRow a, RestrictedGameplayTagTableRow b)
+		{
+			return a.Tag == b.Tag;
+		}
+
+		public static bool operator !=(RestrictedGameplayTagTableRow a, RestrictedGameplayTagTableRow b)
+		{
+			return !(a == b);
 		}
 	}
 
@@ -66,6 +97,39 @@ namespace GameplayTags
 		public GameplayTagNode ParentTagNode => ParentNode;
 		public List<GameplayTagNode> ChildTagNodes => ChildTags;
 		public GameplayTagContainer SingleTagContainer => CompleteTagWithParents;
+		public bool IsExplicitTag
+		{
+			get
+			{
+#if UNITY_EDITOR
+				return isExplicitTag;
+#else
+				return true;
+#endif
+			}
+		}
+		public bool AllowNonRedirectedChildren
+		{
+			get
+			{
+#if UNITY_EDITOR
+				return allowNonRedirectedChildren;
+#else
+				return true;
+#endif
+			}
+		}
+		public bool IsRedirectedGameplayTag
+		{
+			get
+			{
+#if UNITY_EDITOR
+				return isRedirectedTag;
+#else
+				return true;
+#endif
+			}
+		}
 
 		private string Tag;
 		private GameplayTagContainer CompleteTagWithParents = new();
@@ -74,13 +138,16 @@ namespace GameplayTags
 
 #if UNITY_EDITOR
 		public List<string> SourceNames = new();
-		public bool IsExplicitTag;
+		public string FirstSourceName => SourceNames.First();
+		internal bool isExplicitTag;
 		public string DevComment;
+		internal bool isRedirectedTag;
+		internal bool allowNonRedirectedChildren;
 #endif
 
 		public GameplayTagNode() { }
 
-		public GameplayTagNode(string tag, string fullTag, GameplayTagNode parentNode, bool isExplicitTag = false)
+		public GameplayTagNode(string tag, string fullTag, GameplayTagNode parentNode, bool isExplicitTag = false, bool isRedirectedTag = false, bool allowNonRedirectedChildren = false)
 		{
 			Tag = tag;
 			ParentNode = parentNode;
@@ -96,7 +163,9 @@ namespace GameplayTags
 			}
 
 #if UNITY_EDITOR
-			IsExplicitTag = isExplicitTag;
+			this.isExplicitTag = isExplicitTag;
+			this.isRedirectedTag = isRedirectedTag;
+			this.allowNonRedirectedChildren = allowNonRedirectedChildren;
 #endif
 		}
 
@@ -114,7 +183,9 @@ namespace GameplayTags
 			ParentNode = null;
 
 #if UNITY_EDITOR
-			IsExplicitTag = false;
+			isExplicitTag = false;
+			isRedirectedTag = false;
+			allowNonRedirectedChildren = false;
 #endif
 		}
 	}
@@ -124,6 +195,8 @@ namespace GameplayTags
 		public string SourceName;
 		public GameplayTagSourceType SourceType;
 		public GameplayTagsList SourceTagList = new();
+		public RestrictedGameplayTagsList SourceRestrictedTagList = new();
+
 		public static string DefaultName => NAME_DefaultGameplayTagsSO;
 		public static string NativeName => NAME_NativeGameplayTags;
 
@@ -151,7 +224,19 @@ namespace GameplayTags
 
 		private bool DoneAddingNativeTags;
 
+		private bool ShouldWarnOnInvalidTags;
+
 		private bool ShouldAllowUnloadingTags;
+
+		private static HashSet<string> MissingRedirectedTagNames = new();
+
+		public delegate void OnGameplayTagLoaded(in GameplayTag tag);
+
+		public OnGameplayTagLoaded OnGameplayTagLoadedDelegate;
+
+#if UNITY_EDITOR
+		public static event Action OnEditorRefreshGameplayTagTree;
+#endif
 
 		public override void InitializeSingleton()
 		{
@@ -181,6 +266,8 @@ namespace GameplayTags
 
 			DestroyGameplayTagTree();
 			ConstructGameplayTagTree();
+
+			OnEditorRefreshGameplayTagTree?.Invoke();
 		}
 
 		public GameplayTagContainer GetSingleTagContainer(in GameplayTag gameplayTag)
@@ -194,6 +281,28 @@ namespace GameplayTags
 
 		public GameplayTag RequestGameplayTag(string tagName, bool errorIfNotFound = true)
 		{
+			GameplayTag redirectedTag = GameplayTagRedirectors.Instance.RedirectTag(tagName);
+			if (redirectedTag != GameplayTag.EmptyTag)
+			{
+				if (GameplayTagNodeMap.ContainsKey(redirectedTag))
+				{
+					return redirectedTag;
+				}
+
+				if (errorIfNotFound)
+				{
+
+					if (!MissingRedirectedTagNames.Contains(tagName))
+					{
+						string redirectedToName = redirectedTag.TagName;
+						Debug.LogError($"Requested Gameplay Tag {tagName} was redirected to {redirectedToName}, but {redirectedToName} was not found. Fix or remove the redirect from config.");
+						MissingRedirectedTagNames.Add(tagName);
+					}
+				}
+
+				return new GameplayTag();
+			}
+
 			GameplayTag possibleTag = new(tagName);
 
 			if (GameplayTagNodeMap.ContainsKey(possibleTag))
@@ -211,6 +320,48 @@ namespace GameplayTags
 			}
 
 			return new GameplayTag();
+		}
+
+		public GameplayTagContainer RequestGameplayTagChildrenInDictionary(in GameplayTag gameplayTag)
+		{
+			GameplayTagContainer tagContainer = new();
+
+			GameplayTagNode gameplayTagNode = FindTagNode(gameplayTag);
+			if (gameplayTagNode is not null)
+			{
+				AddChildrenTags(tagContainer, gameplayTagNode, true, true);
+			}
+			return tagContainer;
+		}
+
+		private void AddChildrenTags(GameplayTagContainer tagContainer, GameplayTagNode gameplayTagNode, bool recurseAll, bool onlyIncludeDictionaryTags)
+		{
+			if (gameplayTagNode is not null)
+			{
+				List<GameplayTagNode> childrenNodes = gameplayTagNode.ChildTagNodes;
+				foreach (GameplayTagNode childNode in childrenNodes)
+				{
+					if (childNode is not null)
+					{
+						bool shouldInclude = true;
+#if UNITY_EDITOR
+						if (onlyIncludeDictionaryTags && !childNode.IsExplicitTag)
+						{
+							shouldInclude = false;
+						}
+#endif
+						if (shouldInclude)
+						{
+							tagContainer.AddTag(childNode.CompleteTag);
+						}
+
+						if (recurseAll)
+						{
+							AddChildrenTags(tagContainer, childNode, true, onlyIncludeDictionaryTags);
+						}
+					}
+				}
+			}
 		}
 
 		public bool IsValidGameplayTagString(in string tagString, out string error, out string fixedString)
@@ -275,14 +426,31 @@ namespace GameplayTags
 			return false;
 		}
 
-		public bool GetTagEditorData(string tagName, ref string comment, ref string firstTagSource, ref bool isTagExplicit)
+		public bool GetTagEditorData(string tagName, ref string comment, ref string firstTagSource, ref bool isTagExplicit, ref bool isRedirectedTag, ref bool allowNonRedirectedChildren)
 		{
 			GameplayTagNode node = FindTagNode(tagName);
 			if (node is not null)
 			{
 				comment = node.DevComment;
-				firstTagSource = node.SourceNames[0];
-				isTagExplicit = node.IsExplicitTag;
+				firstTagSource = node.FirstSourceName;
+				isTagExplicit = node.isExplicitTag;
+				isRedirectedTag = node.isRedirectedTag;
+				allowNonRedirectedChildren = node.allowNonRedirectedChildren;
+				return true;
+			}
+			return false;
+		}
+
+		public bool GetTagEditorData(string tagName, ref string comment, ref List<string> firstTagSource, ref bool isTagExplicit, ref bool isRedirectedTag, ref bool allowNonRedirectedChildren)
+		{
+			GameplayTagNode node = FindTagNode(tagName);
+			if (node is not null)
+			{
+				comment = node.DevComment;
+				firstTagSource = node.SourceNames;
+				isTagExplicit = node.isExplicitTag;
+				isRedirectedTag = node.isRedirectedTag;
+				allowNonRedirectedChildren = node.allowNonRedirectedChildren;
 				return true;
 			}
 			return false;
@@ -429,7 +597,7 @@ namespace GameplayTags
 			{
 				GameplayRootTag = new GameplayTagNode();
 
-				GameplayTagSettings mutableDefault = AssetDatabase.LoadAssetAtPath<GameplayTagSettings>("Packages/com.luuuuyang.gameplaytags/Editor/Config/DefaultGameplayTags.asset");
+				GameplayTagSettings mutableDefault = GameplayTagSettings.GetOrCreateSettings();
 
 				InvalidTagCharacters = mutableDefault.InvalidTagCharacters;
 				InvalidTagCharacters += "\r\n\t";
@@ -568,7 +736,7 @@ namespace GameplayTags
 						{
 
 						}
-						curNode.IsExplicitTag = curNode.IsExplicitTag || isExplicitTag;
+						curNode.isExplicitTag = curNode.IsExplicitTag || isExplicitTag;
 					}
 #endif
 				}
@@ -855,6 +1023,88 @@ namespace GameplayTags
 		public bool ShouldUnloadTags()
 		{
 			return ShouldAllowUnloadingTags;
+		}
+
+		public void RedirectTagsForContainer(GameplayTagContainer container, SerializedProperty property)
+		{
+			List<string> namesToRemove = new();
+			List<GameplayTag> tagsToAdd = new();
+
+
+			foreach (GameplayTag tag in container)
+			{
+				string tagName = tag.TagName;
+				GameplayTag newTag = GameplayTagRedirectors.Instance.RedirectTag(tagName);
+				if (newTag.IsValid())
+				{
+					namesToRemove.Add(tagName);
+					tagsToAdd.Add(newTag);
+				}
+#if UNITY_EDITOR
+				else if (property != null)
+				{
+					GameplayTag oldTag = RequestGameplayTag(tagName, false);
+					if (!oldTag.IsValid())
+					{
+						if (ShouldWarnOnInvalidTags)
+						{
+							Debug.LogWarning($"Requested Gameplay Tag {tagName} was not found, tags must be loaded from config or registered as a native tag");
+						}
+					}
+				}
+#endif
+			}
+
+			foreach (string name in namesToRemove)
+			{
+				container.RemoveTag(new GameplayTag(name));
+			}
+
+			foreach (GameplayTag tag in tagsToAdd)
+			{
+				container.AddTag(tag);
+			}
+		}
+
+		public void RedirectSingleGameplayTag(ref GameplayTag tag, SerializedProperty property)
+		{
+			string tagName = tag.TagName;
+			GameplayTag newTag = GameplayTagRedirectors.Instance.RedirectTag(tagName);
+			if (newTag.IsValid())
+			{
+				tag = newTag;
+			}
+
+#if UNITY_EDITOR
+			else if (!string.IsNullOrEmpty(tagName) && property != null)
+			{
+				GameplayTag oldTag = RequestGameplayTag(tagName, false);
+				if (!oldTag.IsValid())
+				{
+					if (ShouldWarnOnInvalidTags)
+					{
+						Debug.LogWarning($"Requested Gameplay Tag {tagName} was not found, tags must be loaded from config or registered as a native tag");
+					}
+				}
+			}
+#endif
+		}
+
+		public void GameplayTagContainerLoaded(GameplayTagContainer container, SerializedProperty property)
+		{
+			RedirectTagsForContainer(container, property);
+
+			foreach (GameplayTag tag in container)
+			{
+				OnGameplayTagLoadedDelegate?.Invoke(tag);
+			}
+		}
+
+		public void SingleGameplayTagLoaded(ref GameplayTag tag, SerializedProperty property)
+		{
+			RedirectSingleGameplayTag(ref tag, property);
+
+			OnGameplayTagLoadedDelegate?.Invoke(tag);
 		}
 	}
 }
