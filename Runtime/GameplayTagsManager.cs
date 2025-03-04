@@ -572,7 +572,7 @@ namespace GameplayTags
 			}
 			else if (sourceType == GameplayTagSourceType.DefaultTagList)
 			{
-				newSource.SourceTagList = AssetDatabase.LoadAssetAtPath<GameplayTagsList>("Packages/com.luuuuyang.gameplaytags/Editor/Config/DefaultGameplayTags.asset");
+				newSource.SourceTagList = GameplayTagSettings.GetOrCreateSettings();
 			}
 			else if (sourceType == GameplayTagSourceType.TagList)
 			{

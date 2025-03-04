@@ -13,56 +13,8 @@ MonoBehaviour:
   m_Name: DefaultGameplayTags
   m_EditorClassIdentifier: 
   ConfigFileName: 
-  GameplayTagList:
-  - Tag: Animal
-    DevComment: 
-  - Tag: Animal.Capybara
-    DevComment: 
-  - Tag: Animal.Dog
-    DevComment: 
-  - Tag: Animal.HouseMouse
-    DevComment: 
-  - Tag: Animal.Otter
-    DevComment: 
-  - Tag: Animal.Otter
-    DevComment: 
-  - Tag: Animal.Panda
-    DevComment: 
-  - Tag: Animal.Panda
-    DevComment: 
-  - Tag: Animal.PantheraLeoLeo
-    DevComment: 
-  - Tag: Animal.RedPanda
-    DevComment: 
-  - Tag: Climate.Polar
-    DevComment: 
-  - Tag: Climate.Temperate
-    DevComment: 
-  - Tag: Climate.Tropics
-    DevComment: 
-  - Tag: Climate.Tropics
-    DevComment: 
-  - Tag: Continent
-    DevComment: 
-  - Tag: Continent.Africa
-    DevComment: 
-  - Tag: Continent.Asia
-    DevComment: 
-  - Tag: Continent.Europe
-    DevComment: 
-  - Tag: Continent.NorthAmerica
-    DevComment: 
-  - Tag: Continent.SouthAmerica
-    DevComment: 
-  - Tag: Habitat.Herbaceous
-    DevComment: "\u8349\u672C"
-  - Tag: Habitat.LargeArbor
-    DevComment: "\u5927\u4E54\u6728"
-  - Tag: Habitat.Water
-    DevComment: "\u6C34\u751F"
-  - Tag: Trigger
-    DevComment: 
-  - Tag: Trigger.OnMount
-    DevComment: 
+  GameplayTagList: []
   ImportTagsFromConfig: 1
-  InvalidTagCharacters: \,
+  WarnOnInvalidTags: 1
+  GameplayTagRedirects: []
+  InvalidTagCharacters: '",'
