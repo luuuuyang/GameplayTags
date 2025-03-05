@@ -7,9 +7,7 @@ namespace GameplayTags
 {
     [CreateAssetMenu(fileName = "GameplayTagSettings", menuName = "GameplayAbilities/GameplayTagSettings")]
     public class GameplayTagSettings : GameplayTagsList
-    {
-        public const string SettingsPath = "Packages/com.luuuuyang.gameplaytags/Editor/Config/DefaultGameplayTags.asset";
-        
+    {   
         [ReadOnly]
         public bool ImportTagsFromConfig = true;
 
@@ -24,11 +22,15 @@ namespace GameplayTags
 
         public static GameplayTagSettings GetOrCreateSettings()
         {
-            GameplayTagSettings settings = AssetDatabase.LoadAssetAtPath<GameplayTagSettings>(SettingsPath);
+            MonoScript script = MonoScript.FromScriptableObject(CreateInstance<GameplayTagSettings>());
+            string scriptPath = AssetDatabase.GetAssetPath(script);
+            string settingsPath = scriptPath.Replace("Runtime/GameplayTagSettings.cs", "Editor/Config/" + GameplayTagSource.DefaultName);
+
+            GameplayTagSettings settings = AssetDatabase.LoadAssetAtPath<GameplayTagSettings>(settingsPath);
             if (settings == null)
             {
                 settings = CreateInstance<GameplayTagSettings>();
-                AssetDatabase.CreateAsset(settings, SettingsPath);
+                AssetDatabase.CreateAsset(settings, settingsPath);
                 AssetDatabase.SaveAssets();
             }
             return settings;
