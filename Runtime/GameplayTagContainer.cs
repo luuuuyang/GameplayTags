@@ -1165,7 +1165,7 @@ namespace GameplayTags
 	}
 
 	[Serializable]
-	public class EditableGameplayTagQueryExpression
+	public abstract class EditableGameplayTagQueryExpression
 	{
 #if UNITY_EDITOR
 		public virtual void EmitTokens(List<byte> tokenStream, List<GameplayTag> tagDictionary, ref string debugString)

@@ -1,10 +1,8 @@
-using GameplayTags;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
 #if ODIN_INSPECTOR
-using Sirenix.OdinInspector;
 using Sirenix.OdinInspector.Editor;
 using Sirenix.Utilities.Editor;
 
@@ -28,7 +26,14 @@ namespace GameplayTags.Editor
         {
             SirenixEditorGUI.BeginHorizontalPropertyLayout(label);
             {
-                if (SirenixEditorGUI.Button(QueryDescription, ButtonSizes.Medium))
+                Rect rect = GUILayoutUtility.GetRect(0f, (float)22f);
+                GUIContent content = new(QueryDescription, QueryDescriptionTooltip);
+                GUIStyle style = new("Button")
+                {
+                    alignment = TextAnchor.MiddleCenter,
+                    clipping = TextClipping.Ellipsis
+                };
+                if (GUI.Button(rect, content, style))
                 {
                     OnEditButtonClicked();
                 }
@@ -50,11 +55,11 @@ namespace GameplayTags.Editor
         {
             GameplayTagQueryWindowArgs args = new()
             {
-                // OnQueriesCommitted = OnQueriesCommitted,
+                OnQueriesCommitted = OnQueriesCommitted,
                 EditableQueries = CachedQueries,
                 ReadOnly = ReadOnly,
             };
-            // EditorWindow.GetWindow<GameplayTagQueryWindow>().OpenWindow(args);
+            EditorWindow.GetWindow<OdinGameplayTagQueryWindow>().OpenGameplayTagQueryWindow(args);
         }
 
         private void OnClearAllButtonClicked()

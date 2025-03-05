@@ -1,53 +1,40 @@
 using System;
 using System.Collections.Generic;
-using UnityEditor;
-using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 #if ODIN_INSPECTOR
-
 using Sirenix.OdinInspector.Editor;
 using Sirenix.OdinInspector;
 
 namespace GameplayTags.Editor
 {
+    public delegate void OnQueriesCommittedDelegate(in List<GameplayTagQuery> tagQueries);
+
     public class OdinGameplayTagQueryWindow : OdinEditorWindow
     {
-        public delegate void OnQueriesCommittedDelegate(in List<GameplayTagQuery> tagQueries);
+        private bool ReadOnly;
+        private List<GameplayTagQuery> TagQueries;
+        private OnQueriesCommittedDelegate OnQueriesCommitted;
+        private Action OnOK;
+        private Action OnCancel;
+        [SerializeField] private EditableGameplayTagQuery EditableQuery;
+        private List<GameplayTagQuery> OriginalTagQueries;
 
-        [HideInInspector]
-        public bool ReadOnly;
-
-        [HideInInspector]
-        public List<GameplayTagQuery> TagQueries;
-
-        [HideInInspector]
-        public OnQueriesCommittedDelegate OnQueriesCommitted;
-
-        [HideInInspector]
-        public Action OnOK;
-
-        [HideInInspector]
-        public Action OnCancel;
-
-        public EditableGameplayTagQuery EditableQuery;
-
-        [HideInInspector]
-        public List<GameplayTagQuery> OriginalTagQueries;
-
-
-        public void OpenWindow(GameplayTagQueryWindowArgs args)
+        public void OpenGameplayTagQueryWindow(GameplayTagQueryWindowArgs args)
         {
             TagQueries = args.EditableQueries;
 
             ReadOnly = args.ReadOnly;
-            // OnQueriesCommitted = args.OnQueriesCommitted;
+            OnQueriesCommitted = args.OnQueriesCommitted;
 
             EditableGameplayTagQuery editableGameplayTagQuery = CreateEditableQuery(TagQueries[0]);
             EditableQuery = editableGameplayTagQuery;
 
             OriginalTagQueries = TagQueries;
+
+            OnOK += Close;
+            OnCancel += Close;
         }
 
         public EditableGameplayTagQuery CreateEditableQuery(GameplayTagQuery Q)
@@ -108,12 +95,11 @@ namespace GameplayTags.Editor
         }
     }
 
-
     public struct GameplayTagQueryWindowArgs
     {
         public string Title;
         public bool ReadOnly;
-        // public GameplayTagQueryWindow.OnQueriesCommittedDelegate OnQueriesCommitted;
+        public OnQueriesCommittedDelegate OnQueriesCommitted;
         public List<GameplayTagQuery> EditableQueries;
     };
 }
