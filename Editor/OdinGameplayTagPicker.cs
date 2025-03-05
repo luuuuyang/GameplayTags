@@ -96,9 +96,7 @@ namespace GameplayTags.Editor
             List<GameplayTagContainer> tagContainers,
             GameplayTagPickerMode mode = GameplayTagPickerMode.SelectionMode)
         {
-            Debug.Log("ShowWindow");
             OdinGameplayTagPicker window = GetWindow<OdinGameplayTagPicker>();
-            Debug.Log("ShowWindow2");
             window.MultiSelect = multiSelect;
             window.Property = property;
             window.OnTagChanged = callback;
@@ -117,11 +115,6 @@ namespace GameplayTags.Editor
 
             // 初始化样式
             iconStyle = new GUIStyle() { margin = new RectOffset(5, 0, 4, 0) };
-        }
-
-        private void Update()
-        {
-            Debug.Log("Update");
         }
 
         private void PopulateTagSources()

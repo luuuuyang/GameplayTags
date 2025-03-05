@@ -64,7 +64,11 @@ namespace GameplayTags.Editor
                     success = true;
                 }
 
+#if UNITY_2023_1_OR_NEWER
                 if (!AssetDatabase.AssetPathExists(configFileName))
+#else
+                if (!AssetDatabase.LoadAssetAtPath<Object>(configFileName))
+#endif
                 {
                     AssetDatabase.CreateAsset(tagListObj, configFileName);
                 }
