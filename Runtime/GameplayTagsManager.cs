@@ -1054,6 +1054,7 @@ namespace GameplayTags
 			return ShouldAllowUnloadingTags;
 		}
 
+#if UNITY_EDITOR
 		public void RedirectTagsForContainer(GameplayTagContainer container, SerializedProperty property)
 		{
 			List<string> namesToRemove = new();
@@ -1104,7 +1105,6 @@ namespace GameplayTags
 				tag = newTag;
 			}
 
-#if UNITY_EDITOR
 			else if (!string.IsNullOrEmpty(tagName) && property != null)
 			{
 				GameplayTag oldTag = RequestGameplayTag(tagName, false);
@@ -1116,7 +1116,6 @@ namespace GameplayTags
 					}
 				}
 			}
-#endif
 		}
 
 		public void GameplayTagContainerLoaded(GameplayTagContainer container, SerializedProperty property)
@@ -1135,5 +1134,6 @@ namespace GameplayTags
 
 			OnGameplayTagLoadedDelegate?.Invoke(tag);
 		}
+#endif
 	}
 }
