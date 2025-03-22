@@ -968,7 +968,11 @@ namespace GameplayTags
 			{
 				pathInfo.Reset();
 
-				string[] filesInDictionary = Directory.GetFiles(rootDir, "*.asset", SearchOption.TopDirectoryOnly);
+				string[] filesInDictionary = new string[0];
+				if (Directory.Exists(rootDir))
+				{
+					filesInDictionary = Directory.GetFiles(rootDir, "*.asset", SearchOption.TopDirectoryOnly);
+				}
 
 				if (filesInDictionary.Length > 0)
 				{
