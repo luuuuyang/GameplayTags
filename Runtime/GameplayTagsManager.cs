@@ -282,6 +282,7 @@ namespace GameplayTags
 			}
 		}
 
+#if UNITY_EDITOR
 		public void EditorRefreshGameplayTagTree()
 		{
 			foreach (var pair in RegisteredSearchPaths)
@@ -294,6 +295,7 @@ namespace GameplayTags
 
 			OnEditorRefreshGameplayTagTree?.Invoke();
 		}
+#endif
 
 		public GameplayTagContainer GetSingleTagContainer(in GameplayTag gameplayTag)
 		{
@@ -451,6 +453,7 @@ namespace GameplayTags
 			return false;
 		}
 
+#if UNITY_EDITOR
 		public bool GetTagEditorData(string tagName, ref string comment, ref string firstTagSource, ref bool isTagExplicit, ref bool isRedirectedTag, ref bool allowNonRedirectedChildren)
 		{
 			GameplayTagNode node = FindTagNode(tagName);
@@ -480,6 +483,7 @@ namespace GameplayTags
 			}
 			return false;
 		}
+#endif
 
 		public GameplayTagContainer RequestGameplayTagParents(in GameplayTag gameplayTag)
 		{
@@ -1017,7 +1021,7 @@ namespace GameplayTags
 				if (foundSource != null && foundSource.SourceTagList != null)
 				{
 					foundSource.SourceTagList.ConfigFileName = iniFilePath;
-					foundSource.SourceTagList = AssetDatabase.LoadAssetAtPath<GameplayTagsList>(iniFilePath);
+					foundSource.SourceTagList = Resources.Load<GameplayTagsList>(iniFilePath);
 				}
 
 #if UNITY_EDITOR

@@ -1141,6 +1141,7 @@ namespace GameplayTags
 		[SerializeReference]
 		public EditableGameplayTagQueryExpression RootExpression;
 
+#if UNITY_EDITOR
 		public void EmitTokens(List<byte> tokenStream, List<GameplayTag> tagDictionary, ref string debugString)
 		{
 			if (debugString != null)
@@ -1162,6 +1163,7 @@ namespace GameplayTags
 				}
 			}
 		}
+#endif
 	}
 
 	[Serializable]
