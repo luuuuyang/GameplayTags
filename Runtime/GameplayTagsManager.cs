@@ -1,4 +1,3 @@
-using DesignPatterns;
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -194,8 +193,8 @@ namespace GameplayTags
 	{
 		public string SourceName;
 		public GameplayTagSourceType SourceType;
-		public GameplayTagsList SourceTagList = new();
-		public RestrictedGameplayTagsList SourceRestrictedTagList = new();
+		public GameplayTagsList SourceTagList = ScriptableObject.CreateInstance<GameplayTagsList>();
+		public RestrictedGameplayTagsList SourceRestrictedTagList = ScriptableObject.CreateInstance<RestrictedGameplayTagsList>();
 
 		public static string DefaultName => NAME_DefaultGameplayTagsSO;
 		public static string NativeName => NAME_NativeGameplayTags;
@@ -204,8 +203,35 @@ namespace GameplayTags
 		private static readonly string NAME_NativeGameplayTags = "Native";
 	}
 
-	public class GameplayTagsManager : Singleton<GameplayTagsManager>
+	public class GameplayTagsManager
 	{
+		public static GameplayTagsManager Instance
+		{
+			get
+			{
+				if (instance == null)
+				{
+					//ensure that only one thread can execute
+					lock (typeof(GameplayTagsManager))
+					{
+						if (instance == null)
+						{
+							instance = new GameplayTagsManager();
+							InitializeManager();
+						}
+					}
+				}
+				return instance;
+			}
+		}
+
+		public OnGameplayTagLoaded OnGameplayTagLoadedDelegate;
+
+#if UNITY_EDITOR
+		public static event Action OnEditorRefreshGameplayTagTree;
+#endif
+
+		private static GameplayTagsManager instance;
 		private HashSet<string> LegacyNativeTags = new();
 
 		private Dictionary<string, GameplayTagSearchPathInfo> RegisteredSearchPaths = new();
@@ -232,15 +258,14 @@ namespace GameplayTags
 
 		public delegate void OnGameplayTagLoaded(in GameplayTag tag);
 
-		public OnGameplayTagLoaded OnGameplayTagLoadedDelegate;
-
-#if UNITY_EDITOR
-		public static event Action OnEditorRefreshGameplayTagTree;
-#endif
-
-		public override void InitializeSingleton()
+		private static void InitializeManager()
 		{
-			ConstructGameplayTagTree();
+			GameplayTagSettings mutableDefault = null;
+			{
+				mutableDefault = GameplayTagSettings.GetOrCreateSettings();
+			}
+
+			instance.ConstructGameplayTagTree();
 		}
 
 		public void PopulateTreeFromDataTable(List<string> tags)
@@ -629,7 +654,7 @@ namespace GameplayTags
 					AddTagTableRow(tableRow, TagSource);
 				}
 
-				string defaultPath = "Assets";
+				string defaultPath = "Assets/GameplayTags";
 				AddTagIniSearchPath(defaultPath);
 
 				foreach (var pair in RegisteredSearchPaths)

@@ -2,6 +2,8 @@ using GameplayTags;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using Sirenix.Utilities;
+
 
 #if ODIN_INSPECTOR
 using Sirenix.OdinInspector;
@@ -30,7 +32,6 @@ namespace GameplayTags.Editor
 
         protected override void DrawPropertyLayout(GUIContent label)
         {
-            // SirenixEditorGUI.BeginBox();
             SirenixEditorGUI.BeginHorizontalPropertyLayout(label);
 
             SirenixEditorGUI.BeginVerticalList();
@@ -61,7 +62,6 @@ namespace GameplayTags.Editor
             SirenixEditorGUI.EndVerticalList();
 
             SirenixEditorGUI.EndHorizontalPropertyLayout();
-            // SirenixEditorGUI.EndBox();
         }
 
         protected override void Initialize()
@@ -105,15 +105,7 @@ namespace GameplayTags.Editor
 
         private void OnGetMenuContent()
         {
-            List<GameplayTagContainer> tagContainersToEdit = new();
-
-            // PopupWindow.Show(EditorGUILayout.GetControlRect(), new GameplayTagPicker
-            // {
-            //     Property = Property,
-            //     MultiSelect = true,
-            //     TagContainers = tagContainersToEdit,
-            //     OnTagChanged = OnTagChanged
-            // });
+            List<GameplayTagContainer> tagContainersToEdit = new(); 
 
             OdinGameplayTagPicker.ShowWindow(EditorGUILayout.GetControlRect(), true, Property, OnTagChanged, tagContainersToEdit);
         }

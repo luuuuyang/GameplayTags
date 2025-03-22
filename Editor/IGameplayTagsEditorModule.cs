@@ -1,12 +1,32 @@
 using UnityEditor;
 using UnityEngine;
-using DesignPatterns;
 using System.Collections.Generic;
 
 namespace GameplayTags.Editor
 {
-    public class IGameplayTagsEditorModule : Singleton<IGameplayTagsEditorModule>
+    public class IGameplayTagsEditorModule
     {
+        public static IGameplayTagsEditorModule Instance
+        {
+            get
+            {
+                if (instance == null)
+                {
+                    //ensure that only one thread can execute
+                    lock (typeof(IGameplayTagsEditorModule))
+                    {
+                        if (instance == null)
+                        {
+                            instance = new();
+                        }
+                    }
+                }
+                return instance;
+            }
+        }
+
+        private static IGameplayTagsEditorModule instance;
+
         public bool AddNewGameplayTagToINI(in string newTag, in string comment, in string tagSourceName, bool tagIsExplicit = false, bool tagIsRedirected = false, bool tagAllowsNonRedirectedChildren = false)
         {
             GameplayTagsManager manager = GameplayTagsManager.Instance;
@@ -70,6 +90,8 @@ namespace GameplayTags.Editor
                 if (!AssetDatabase.LoadAssetAtPath<Object>(configFileName))
 #endif
                 {
+                    // create directory if not exists
+                    AssetDatabase.CreateFolder("Assets", "GameplayTags");
                     AssetDatabase.CreateAsset(tagListObj, configFileName);
                 }
                 EditorUtility.SetDirty(tagListObj);
@@ -250,7 +272,7 @@ namespace GameplayTags.Editor
         {
             GameplayTagSettings settings = GameplayTagSettings.GetOrCreateSettings();
             GameplayTagsManager manager = GameplayTagsManager.Instance;
-            
+
             for (int i = 0; i < settings.GameplayTagRedirects.Count; i++)
             {
                 if (settings.GameplayTagRedirects[i].OldTagName == tagToDelete)

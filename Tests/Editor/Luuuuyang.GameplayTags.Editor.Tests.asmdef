@@ -5,8 +5,7 @@
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "Unity.PerformanceTesting",
-        "Luuuyang.GameplayTags",
-        "Luuuuyang.DesignPatterns"
+        "Luuuyang.GameplayTags"
     ],
     "includePlatforms": [
         "Editor"

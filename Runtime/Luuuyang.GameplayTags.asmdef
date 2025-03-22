@@ -1,9 +1,7 @@
 {
     "name": "Luuuyang.GameplayTags",
     "rootNamespace": "",
-    "references": [
-        "Luuuuyang.DesignPatterns"
-    ],
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

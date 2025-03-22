@@ -21,9 +21,12 @@ namespace GameplayTags.Editor
                 OdinGameplayTagPicker.ShowWindow(EditorGUILayout.GetControlRect(), false, Property, OnTagSelected, new List<GameplayTagContainer>());
             }
 
-            if (SirenixEditorGUI.IconButton(EditorIcons.X))
+            if (ValueEntry.SmartValue.IsValid())
             {
-                OnClearTag();
+                if (SirenixEditorGUI.IconButton(EditorIcons.X)) 
+                {
+                    OnClearTag();
+                }
             }
 
             SirenixEditorGUI.EndHorizontalPropertyLayout();
