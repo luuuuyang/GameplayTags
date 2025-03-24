@@ -658,7 +658,7 @@ namespace GameplayTags
 					AddTagTableRow(tableRow, TagSource);
 				}
 
-				string defaultPath = "Assets/GameplayTags";
+				string defaultPath = "Assets/Resources";
 				AddTagIniSearchPath(defaultPath);
 
 				foreach (var pair in RegisteredSearchPaths)
