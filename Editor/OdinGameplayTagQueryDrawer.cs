@@ -1,8 +1,6 @@
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
-
-#if ODIN_INSPECTOR
 using Sirenix.OdinInspector.Editor;
 using Sirenix.Utilities.Editor;
 
@@ -31,7 +29,11 @@ namespace GameplayTags.Editor
                 GUIStyle style = new("Button")
                 {
                     alignment = TextAnchor.MiddleCenter,
-                    clipping = TextClipping.Ellipsis
+#if UNITY_2023_1_OR_NEWER
+                    clipping = TextClipping.Ellipsis,
+#else
+                    clipping = TextClipping.Clip,
+#endif
                 };
                 if (GUI.Button(rect, content, style))
                 {
@@ -146,4 +148,3 @@ namespace GameplayTags.Editor
         }
     }
 }
-#endif

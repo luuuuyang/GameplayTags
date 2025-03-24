@@ -202,7 +202,9 @@ namespace GameplayTags.Editor
         {
             if (property.ValueEntry.TypeOfValue == typeof(GameplayTagContainer))
             {
-                callback((GameplayTagContainer)property.ValueEntry.WeakSmartValue);
+                GameplayTagContainer container = new();
+                container.CopyFrom((GameplayTagContainer)property.ValueEntry.WeakSmartValue);
+                callback(container);
                 return true;
             }
             if (property.ValueEntry.TypeOfValue == typeof(GameplayTag))
@@ -291,13 +293,18 @@ namespace GameplayTags.Editor
 
         private void OnTagChecked(GameplayTagNode nodeChecked)
         {
+            GameplayTagsManager tagsManager = GameplayTagsManager.Instance;
+
             foreach (GameplayTagContainer container in TagContainers)
             {
                 GameplayTagNode curNode = nodeChecked;
+
                 bool removeParents = false;
+
                 while (curNode is not null)
                 {
                     GameplayTag gameplayTag = curNode.CompleteTag;
+
                     if (removeParents == false)
                     {
                         removeParents = true;
@@ -311,9 +318,11 @@ namespace GameplayTags.Editor
                     {
                         container.RemoveTag(gameplayTag);
                     }
+
                     curNode = curNode.ParentTagNode;
                 }
             }
+            
             OnContainersChanged();
         }
 
@@ -417,7 +426,6 @@ namespace GameplayTags.Editor
         {
             if (PersistExpansionChange)
             {
-
                 if (isExpanded)
                 {
                     CachedExpandedItems.Add(item);
