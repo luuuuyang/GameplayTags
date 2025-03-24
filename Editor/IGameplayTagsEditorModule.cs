@@ -91,7 +91,14 @@ namespace GameplayTags.Editor
 #endif
                 {
                     // create directory if not exists
-                    AssetDatabase.CreateFolder("Assets", "GameplayTags");
+                    if (!AssetDatabase.IsValidFolder("Assets/Resources"))
+                    {
+                        AssetDatabase.CreateFolder("Assets", "Resources");
+                    }
+                    if (!AssetDatabase.IsValidFolder("Assets/Resources/GameplayTags"))
+                    {
+                        AssetDatabase.CreateFolder("Assets/Resources", "GameplayTags");
+                    }
                     AssetDatabase.CreateAsset(tagListObj, configFileName);
                 }
                 EditorUtility.SetDirty(tagListObj);
