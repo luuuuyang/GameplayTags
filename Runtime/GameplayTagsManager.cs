@@ -242,6 +242,8 @@ namespace GameplayTags
 
 		private Dictionary<string, GameplayTagSource> TagSources = new();
 
+		private HashSet<string> RestrictedGameplayTagSourceNames = new();
+
 		private string InvalidTagCharacters;
 
 		private HashSet<string> MissingTagNames = new();
@@ -285,7 +287,7 @@ namespace GameplayTags
 #if UNITY_EDITOR
 		public void EditorRefreshGameplayTagTree()
 		{
-			foreach (var pair in RegisteredSearchPaths)
+			foreach (KeyValuePair<string, GameplayTagSearchPathInfo> pair in RegisteredSearchPaths)
 			{
 				pair.Value.WasSearched = false;
 			}
@@ -612,7 +614,7 @@ namespace GameplayTags
 				}
 				else
 				{
-					newSource.SourceTagList.ConfigFileName = rootDirToUse + "/" + tagSourceName;
+					newSource.SourceTagList.ConfigFileName = Path.Combine(rootDirToUse, tagSourceName);
 					RegisteredSearchPaths.TryAdd(rootDirToUse, new GameplayTagSearchPathInfo());
 				}
 			}
@@ -658,10 +660,12 @@ namespace GameplayTags
 					AddTagTableRow(tableRow, TagSource);
 				}
 
-				string defaultPath = "Assets/Resources";
+				// Make sure default config list is added
+				string defaultPath = "Assets/Resources/GameplayTags";
 				AddTagIniSearchPath(defaultPath);
 
-				foreach (var pair in RegisteredSearchPaths)
+				// Refresh any other search paths that need it
+				foreach (KeyValuePair<string, GameplayTagSearchPathInfo> pair in RegisteredSearchPaths)
 				{
 					if (!pair.Value.IsValid())
 					{
@@ -972,17 +976,17 @@ namespace GameplayTags
 			{
 				pathInfo.Reset();
 
-				string[] filesInDictionary = new string[0];
+				string[] filesInDirectory = new string[0];
 				if (Directory.Exists(rootDir))
 				{
-					filesInDictionary = Directory.GetFiles(rootDir, "*.asset", SearchOption.TopDirectoryOnly);
+					filesInDirectory = Directory.GetFiles(rootDir, "*.asset", SearchOption.TopDirectoryOnly);
 				}
 
-				if (filesInDictionary.Length > 0)
+				if (filesInDirectory.Length > 0)
 				{
-					filesInDictionary.Sort();
+					filesInDirectory.Sort();
 
-					foreach (string iniFilePath in filesInDictionary)
+					foreach (string iniFilePath in filesInDirectory)
 					{
 						string tagSource = Path.GetFileNameWithoutExtension(iniFilePath);
 						pathInfo.SourcesInPath.Add(tagSource);
@@ -1009,7 +1013,7 @@ namespace GameplayTags
 			{
 				string tagSource = Path.GetFileNameWithoutExtension(iniFilePath);
 
-				if (RegisteredSearchPaths.ContainsKey(iniFilePath))
+				if (RestrictedGameplayTagSourceNames.Contains(iniFilePath))
 				{
 					continue;
 				}
@@ -1021,15 +1025,14 @@ namespace GameplayTags
 				if (foundSource != null && foundSource.SourceTagList != null)
 				{
 					foundSource.SourceTagList.ConfigFileName = iniFilePath;
-					foundSource.SourceTagList = Resources.Load<GameplayTagsList>(iniFilePath);
-				}
-
+					foundSource.SourceTagList = Resources.Load<GameplayTagsList>(iniFilePath.Replace("Assets/Resources/", "").Replace(".asset", ""));
 #if UNITY_EDITOR
-				foundSource.SourceTagList.SortTags();
+					foundSource.SourceTagList.SortTags();
 #endif
-				foreach (GameplayTagTableRow tableRow in foundSource.SourceTagList.GameplayTagList)
-				{
-					AddTagTableRow(tableRow, tagSource);
+					foreach (GameplayTagTableRow tableRow in foundSource.SourceTagList.GameplayTagList)
+					{
+						AddTagTableRow(tableRow, tagSource);
+					}
 				}
 			}
 		}

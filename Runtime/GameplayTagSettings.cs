@@ -37,7 +37,7 @@ namespace GameplayTags
             //     AssetDatabase.SaveAssets();
             // }
 
-            GameplayTagSettings settings = Resources.Load<GameplayTagSettings>("DefaultGameplayTags");
+            GameplayTagSettings settings = Resources.Load<GameplayTagSettings>("GameplayTags/DefaultGameplayTags");
             return settings;
         }
 
