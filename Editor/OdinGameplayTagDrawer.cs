@@ -35,13 +35,13 @@ namespace GameplayTags.Editor
         private void OnTagSelected(in List<GameplayTagContainer> tagContainers)
         {
             ValueEntry.SmartValue = tagContainers.IsEmpty() ? new GameplayTag() : tagContainers[0].First();
-            ValueEntry.ApplyChanges();
+            Property.Tree.ApplyChanges();
         }
 
         private void OnClearTag()
         {
             ValueEntry.SmartValue = new GameplayTag();
-            ValueEntry.ApplyChanges();
+            Property.Tree.ApplyChanges();
         }
     }
 }

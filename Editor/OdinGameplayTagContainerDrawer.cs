@@ -42,8 +42,9 @@ namespace GameplayTags.Editor
                         }
                     }
 
-                    foreach (EditableItem item in TagsToEdit)
+                    for (int i = 0; i < TagsToEdit.Count; i++)
                     {
+                        EditableItem item = TagsToEdit[i];
                         EditorGUILayout.BeginHorizontal();
                         {
                             if (SirenixEditorGUI.Button(item.Tag.TagName, ButtonSizes.Medium))

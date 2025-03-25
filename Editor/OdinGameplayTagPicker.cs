@@ -322,7 +322,7 @@ namespace GameplayTags.Editor
                     curNode = curNode.ParentTagNode;
                 }
             }
-            
+
             OnContainersChanged();
         }
 
@@ -447,7 +447,7 @@ namespace GameplayTags.Editor
             {
                 Property.ValueEntry.WeakSmartValue = TagContainers[0].First();
             }
-            Property.ValueEntry.ApplyChanges();
+            Property.Tree.ApplyChanges();
 
             OnTagChanged?.Invoke(TagContainers);
         }
