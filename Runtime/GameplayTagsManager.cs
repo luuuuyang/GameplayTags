@@ -661,7 +661,7 @@ namespace GameplayTags
 				}
 
 				// Make sure default config list is added
-				string defaultPath = "Assets/Resources/GameplayTags";
+				string defaultPath = Path.Combine(Application.dataPath, "Resources/GameplayTags");
 				AddTagIniSearchPath(defaultPath);
 
 				// Refresh any other search paths that need it
