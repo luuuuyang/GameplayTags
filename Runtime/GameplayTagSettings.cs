@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
+using System.IO;
+
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -37,7 +39,7 @@ namespace GameplayTags
             //     AssetDatabase.SaveAssets();
             // }
 
-            GameplayTagSettings settings = Resources.Load<GameplayTagSettings>("GameplayTags/DefaultGameplayTags");
+            GameplayTagSettings settings = Resources.Load<GameplayTagSettings>(Path.GetFileNameWithoutExtension(GameplayTagSource.DefaultName));
             return settings;
         }
 

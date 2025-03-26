@@ -661,7 +661,7 @@ namespace GameplayTags
 				}
 
 				// Make sure default config list is added
-				string defaultPath = Path.Combine(Application.dataPath, "Resources/GameplayTags");
+				string defaultPath = "Assets/Resources/GameplayTags";
 				AddTagIniSearchPath(defaultPath);
 
 				// Refresh any other search paths that need it
@@ -976,21 +976,16 @@ namespace GameplayTags
 			{
 				pathInfo.Reset();
 
-				string[] filesInDirectory = new string[0];
-				if (Directory.Exists(rootDir))
-				{
-					filesInDirectory = Directory.GetFiles(rootDir, "*.asset", SearchOption.TopDirectoryOnly);
-				}
-
+				GameplayTagsList[] filesInDirectory = Resources.LoadAll<GameplayTagsList>(NormalizeConfigIniPath(rootDir));
 				if (filesInDirectory.Length > 0)
 				{
-					filesInDirectory.Sort();
+					filesInDirectory.Sort((a, b) => string.Compare(a.ConfigFileName, b.ConfigFileName, StringComparison.Ordinal));
 
-					foreach (string iniFilePath in filesInDirectory)
+					foreach (GameplayTagsList iniFile in filesInDirectory)
 					{
-						string tagSource = Path.GetFileNameWithoutExtension(iniFilePath);
+						string tagSource = Path.GetFileName(iniFile.ConfigFileName);
 						pathInfo.SourcesInPath.Add(tagSource);
-						pathInfo.TagIniList.Add(iniFilePath);
+						pathInfo.TagIniList.Add(iniFile.ConfigFileName);
 					}
 				}
 
@@ -1011,7 +1006,7 @@ namespace GameplayTags
 		{
 			foreach (string iniFilePath in iniFileList)
 			{
-				string tagSource = Path.GetFileNameWithoutExtension(iniFilePath);
+				string tagSource = Path.GetFileName(iniFilePath);
 
 				if (RestrictedGameplayTagSourceNames.Contains(iniFilePath))
 				{
@@ -1025,7 +1020,7 @@ namespace GameplayTags
 				if (foundSource != null && foundSource.SourceTagList != null)
 				{
 					foundSource.SourceTagList.ConfigFileName = iniFilePath;
-					foundSource.SourceTagList = Resources.Load<GameplayTagsList>(iniFilePath.Replace("Assets/Resources/", "").Replace(".asset", ""));
+					foundSource.SourceTagList = Resources.Load<GameplayTagsList>(NormalizeConfigIniPath(iniFilePath));
 #if UNITY_EDITOR
 					foundSource.SourceTagList.SortTags();
 #endif
@@ -1059,6 +1054,22 @@ namespace GameplayTags
 		public bool ShouldUnloadTags()
 		{
 			return ShouldAllowUnloadingTags;
+		}
+
+		private static string NormalizeConfigIniPath(string path)
+		{
+			ReadOnlySpan<char> span = path.AsSpan();
+
+			int startIndex = span.IndexOf("Resources/".AsSpan()) + "Resources/".Length;
+
+			int dotIndex = span[startIndex..].LastIndexOf('.');
+
+			if (dotIndex == -1)
+			{
+				return span[startIndex..].ToString();
+			}
+
+			return span[startIndex..(startIndex + dotIndex)].ToString();
 		}
 
 #if UNITY_EDITOR

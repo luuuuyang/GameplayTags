@@ -336,6 +336,8 @@ namespace GameplayTags.Editor
             }
 
             manager.FindOrAddTagSource(tagSourceName, GameplayTagSourceType.TagList, rootDirToUse);
+            
+            Debug.Log($"AddTagSource: Added {tagSourceName} as a source for saving new tags");
 
             return true;
         }
