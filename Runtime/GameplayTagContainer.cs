@@ -289,6 +289,11 @@ namespace GameplayTags
 			return resultContainer;
 		}
 
+		public bool MatchesQuery(in GameplayTagQuery query)
+		{
+			return query.Matches(this);
+		}
+
 		public void AppendTags(in GameplayTagContainer other)
 		{
 			if (other.IsEmpty())
