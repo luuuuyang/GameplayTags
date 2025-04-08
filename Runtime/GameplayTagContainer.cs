@@ -62,7 +62,7 @@ namespace GameplayTags
 
 		public void CopyFrom(GameplayTagContainer other)
 		{
-			if (this == other)
+			if (other is null || this == other)
 			{
 				return;
 			}
@@ -109,6 +109,10 @@ namespace GameplayTags
 
 		public bool Equals(GameplayTagContainer other)
 		{
+			if (other is null)
+			{
+				return false;
+			}
 			return this == other;
 		}
 
