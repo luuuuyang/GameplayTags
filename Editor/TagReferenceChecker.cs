@@ -1,6 +1,7 @@
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace GameplayTags
 {
@@ -21,13 +22,19 @@ namespace GameplayTags
                 // 检查当前属性
                 if (property.propertyType == SerializedPropertyType.Generic && property.isArray == false)
                 {
-                    if (property.boxedValue is GameplayTag gameplayTag && gameplayTag.TagName == tag)
+                    if (property.type == nameof(GameplayTag))
                     {
-                        return true;
+                        if (property.boxedValue is GameplayTag gameplayTag && gameplayTag.TagName == tag)
+                        {
+                            return true;
+                        }
                     }
-                    else if (property.boxedValue is GameplayTagContainer container && container.GameplayTags.Contains(new GameplayTag(tag)))
+                    else if (property.type == nameof(GameplayTagContainer))
                     {
-                        return true;
+                        if (property.boxedValue is GameplayTagContainer container && container.GameplayTags.Contains(new GameplayTag(tag)))
+                        {
+                            return true;
+                        }
                     }
                 }
 
