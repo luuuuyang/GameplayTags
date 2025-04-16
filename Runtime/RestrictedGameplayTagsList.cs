@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace GameplayTags
 {
-    [CreateAssetMenu(fileName = "RestrictedGameplayTagsList", menuName = "Scriptable Objects/RestrictedGameplayTagsList")]
+    [CreateAssetMenu(fileName = "RestrictedGameplayTagsList", menuName = "GameplayAbilities/RestrictedGameplayTagsList")]
     public class RestrictedGameplayTagsList : ScriptableObject
     {
         public string ConfigFileName;
