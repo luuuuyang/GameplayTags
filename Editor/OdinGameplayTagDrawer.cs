@@ -1,12 +1,10 @@
-using GameplayTags;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
-
-#if ODIN_INSPECTOR
 using Sirenix.OdinInspector;
 using Sirenix.OdinInspector.Editor;
 using Sirenix.Utilities.Editor;
+using System.Linq;
 
 namespace GameplayTags.Editor
 {
@@ -16,14 +14,15 @@ namespace GameplayTags.Editor
         {
             SirenixEditorGUI.BeginHorizontalPropertyLayout(label);
 
-            if (SirenixEditorGUI.Button(string.IsNullOrEmpty(ValueEntry.SmartValue.TagName) ? "None" : ValueEntry.SmartValue.TagName, ButtonSizes.Medium))
+            Rect rect = GUILayoutUtility.GetRect(0f, (float)ButtonSizes.Medium);
+            if (GUI.Button(rect, ValueEntry.SmartValue.IsValid() ? ValueEntry.SmartValue.TagName : "None"))
             {
-                OdinGameplayTagPicker.ShowWindow(EditorGUILayout.GetControlRect(), false, Property, OnTagSelected, new List<GameplayTagContainer>());
+                OdinGameplayTagPicker.ShowWindow(rect, false, Property, OnTagSelected, new List<GameplayTagContainer>());
             }
 
             if (ValueEntry.SmartValue.IsValid())
             {
-                if (SirenixEditorGUI.IconButton(EditorIcons.X)) 
+                if (SirenixEditorGUI.IconButton(EditorIcons.X))
                 {
                     OnClearTag();
                 }
@@ -34,7 +33,7 @@ namespace GameplayTags.Editor
 
         private void OnTagSelected(in List<GameplayTagContainer> tagContainers)
         {
-            ValueEntry.SmartValue = tagContainers.IsEmpty() ? new GameplayTag() : tagContainers[0].First();
+            ValueEntry.SmartValue = tagContainers.IsEmpty() ? new GameplayTag() : tagContainers.First().First();
             Property.Tree.ApplyChanges();
         }
 
@@ -45,4 +44,3 @@ namespace GameplayTags.Editor
         }
     }
 }
-#endif

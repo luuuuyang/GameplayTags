@@ -32,13 +32,13 @@ namespace GameplayTags.Editor
         {
             SirenixEditorGUI.BeginHorizontalPropertyLayout(label);
             {
-                SirenixEditorGUI.BeginVerticalList();
+                Rect rect = SirenixEditorGUI.BeginVerticalList();
                 {
                     if (TagsToEdit.Count <= 0)
                     {
                         if (SirenixEditorGUI.Button("Empty", ButtonSizes.Medium))
                         {
-                            OnGetMenuContent();
+                            OnGetMenuContent(rect);
                         }
                     }
 
@@ -49,13 +49,12 @@ namespace GameplayTags.Editor
                         {
                             if (SirenixEditorGUI.Button(item.Tag.TagName, ButtonSizes.Medium))
                             {
-                                OnGetMenuContent();
+                                OnGetMenuContent(rect);
                             }
                             if (SirenixEditorGUI.IconButton(EditorIcons.X))
                             {
                                 OnClearTagClicked(item.Tag);
-                                // break;
-                            }
+                            } 
                         }
                         EditorGUILayout.EndHorizontal();
                     }
@@ -106,11 +105,11 @@ namespace GameplayTags.Editor
             TagsToEdit.Sort((a, b) => a.Tag.CompareTo(b.Tag));
         }
 
-        private void OnGetMenuContent()
+        private void OnGetMenuContent(Rect rect)
         {
             List<GameplayTagContainer> tagContainersToEdit = new();
 
-            OdinGameplayTagPicker.ShowWindow(EditorGUILayout.GetControlRect(), true, Property, OnTagChanged, tagContainersToEdit);
+            OdinGameplayTagPicker.ShowWindow(rect, true, Property, OnTagChanged, tagContainersToEdit);
         }
 
         private void OnTagChanged(in List<GameplayTagContainer> tagContainers)
@@ -121,9 +120,6 @@ namespace GameplayTags.Editor
             {
                 OnTagContainerChanged?.Invoke(tagContainers[0]);
             }
-
-            // this.ValueEntry.Values.ForceMarkDirty();
-            
 
             RefreshTagContainer();
         }

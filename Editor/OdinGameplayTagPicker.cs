@@ -3,9 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
-
-
-#if ODIN_INSPECTOR
 using Sirenix.OdinInspector;
 using Sirenix.OdinInspector.Editor;
 using Sirenix.Utilities.Editor;
@@ -146,7 +143,7 @@ namespace GameplayTags.Editor
         }
 
         public static void ShowWindow(
-            Rect buttonRect,
+            Rect rect,
             bool multiSelect,
             InspectorProperty property,
             TagChangedEventHandler callback,
@@ -159,9 +156,16 @@ namespace GameplayTags.Editor
             window.OnTagChanged = callback;
             window.TagContainers = tagContainers;
             window.Mode = mode;
-            window.position = new Rect(buttonRect.x, buttonRect.y + buttonRect.height, 300, 400);
+
+            window.AdjustPosition(rect);
 
             window.Show();
+        }
+
+        public void AdjustPosition(Rect buttonRect)
+        {
+            Rect screenRect = GUIUtility.GUIToScreenRect(buttonRect);
+            position = new Rect(screenRect.x, screenRect.y + 60, 300, 400);
         }
 
         protected override void OnEnable()
@@ -630,4 +634,3 @@ namespace GameplayTags.Editor
         }
     }
 }
-#endif
