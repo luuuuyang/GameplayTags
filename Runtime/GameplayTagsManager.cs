@@ -155,7 +155,7 @@ namespace GameplayTags
 
 			if (ParentNode is not null && !string.IsNullOrEmpty(ParentNode.SimpleTagName))
 			{
-				GameplayTagContainer parentContainer = ParentNode.SingleTagContainer;
+				GameplayTagContainer parentContainer = new(ParentNode.SingleTagContainer);
 
 				CompleteTagWithParents.ParentTags.Add(parentContainer.GameplayTags[0]);
 				CompleteTagWithParents.ParentTags.AddRange(parentContainer.ParentTags);

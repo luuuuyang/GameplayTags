@@ -170,7 +170,7 @@ namespace GameplayTags.Editor
             }
 
             GameplayTag actualTag = manager.RequestGameplayTag(tagName);
-            GameplayTagContainer childTags = manager.RequestGameplayTagChildrenInDictionary(actualTag);
+            GameplayTagContainer childTags = new(manager.RequestGameplayTagChildrenInDictionary(actualTag));
 
             List<string> tagsThatWillBeDeleted = new List<string>();
 
@@ -179,7 +179,7 @@ namespace GameplayTags.Editor
             GameplayTag parentTag = actualTag.RequestDirectParent();
             while (parentTag.IsValid() && !manager.FindTagNode(parentTag).IsExplicitTag)
             {
-                GameplayTagContainer parentChildTags = manager.RequestGameplayTagChildrenInDictionary(parentTag);
+                GameplayTagContainer parentChildTags = new(manager.RequestGameplayTagChildrenInDictionary(parentTag));
 
                 Debug.Assert(parentChildTags.HasTagExact(actualTag));
                 if (parentChildTags.Count == 1)
