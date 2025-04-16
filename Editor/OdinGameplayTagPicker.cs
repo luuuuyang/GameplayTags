@@ -12,6 +12,63 @@ using Sirenix.Utilities.Editor;
 
 namespace GameplayTags.Editor
 {
+    [UnityEditor.FilePath("Library/GameplayTags/GameplayTagsEditorState.asset", UnityEditor.FilePathAttribute.Location.ProjectFolder)]
+    public class GameplayTagsEditorState : ScriptableSingleton<GameplayTagsEditorState>
+    {
+        [SerializeField]
+        private List<string> NodeItemCompleteTagNames = new();
+
+        [SerializeField]
+        private List<bool> NodeItemExpansionStates = new();
+
+        public void TrySetBool(string key, bool value)
+        {
+            int index = NodeItemCompleteTagNames.IndexOf(key);
+            if (index != -1)
+            {
+                NodeItemExpansionStates[index] = value;
+            }
+            else
+            {
+                NodeItemCompleteTagNames.Add(key);
+                NodeItemExpansionStates.Add(value);
+            }
+
+            Save(true);
+        }
+
+        public bool TryGetBool(string key, out bool value)
+        {
+            int index = NodeItemCompleteTagNames.IndexOf(key);
+            if (index != -1)
+            {
+                value = NodeItemExpansionStates[index];
+                return true;
+            }
+
+            value = false;
+            return false;
+        }
+
+        public void Remove(string key)
+        {
+            int index = NodeItemCompleteTagNames.IndexOf(key);
+            if (index != -1)
+            {
+                NodeItemCompleteTagNames.RemoveAt(index);
+                NodeItemExpansionStates.RemoveAt(index);
+                Save(true);
+            }
+        }
+
+        public void Clear()
+        {
+            NodeItemCompleteTagNames.Clear();
+            NodeItemExpansionStates.Clear();
+            Save(true);
+        }
+    }
+
     public enum GameplayTagPickerMode
     {
         SelectionMode,
@@ -419,13 +476,24 @@ namespace GameplayTags.Editor
 
         private bool IsTagExpanded(GameplayTagNode node)
         {
-            return CachedExpandedItems.Contains(node);
+            if (CachedExpandedItems.Contains(node))
+            {
+                return true;
+            }
+            else if (GameplayTagsEditorState.instance.TryGetBool(node.CompleteTagName, out bool isExpanded) && isExpanded)
+            {
+                return isExpanded;
+            }
+
+            return false;
         }
 
         private void OnExpansionChanged(GameplayTagNode item, bool isExpanded)
         {
             if (PersistExpansionChange)
             {
+                GameplayTagsEditorState.instance.TrySetBool(item.CompleteTagName, isExpanded);
+
                 if (isExpanded)
                 {
                     CachedExpandedItems.Add(item);
@@ -492,7 +560,7 @@ namespace GameplayTags.Editor
             while (parentTagNode is not null)
             {
                 CachedExpandedItems.Add(parentTagNode);
-
+                GameplayTagsEditorState.instance.TrySetBool(parentTagNode.CompleteTagName, true);
                 parentTagNode = parentTagNode.ParentTagNode;
             }
 
