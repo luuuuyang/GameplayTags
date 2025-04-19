@@ -14,7 +14,7 @@ namespace GameplayTags
 		public GameplayTag(in string tagName)
 		{
 			TagName = tagName;
-		}	
+		}
 
 		// public void OnBeforeSerialize()
 		// {

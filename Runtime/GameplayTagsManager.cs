@@ -10,7 +10,7 @@ using Sirenix.Utilities;
 namespace GameplayTags
 {
 	[Serializable]
-	public class GameplayTagTableRow : IComparable<GameplayTagTableRow>
+	public class GameplayTagTableRow : IEquatable<GameplayTagTableRow>, IComparable<GameplayTagTableRow>
 	{
 		public string Tag;
 		public string DevComment;
@@ -21,14 +21,39 @@ namespace GameplayTags
 			DevComment = devComment;
 		}
 
-		public static bool operator ==(GameplayTagTableRow a, GameplayTagTableRow b)
+		public static bool operator ==(GameplayTagTableRow lhs, GameplayTagTableRow rhs)
 		{
-			return a.Tag == b.Tag;
+			if (lhs is null)
+			{
+				return rhs is null;
+			}
+
+			return lhs.Equals(rhs);
 		}
 
-		public static bool operator !=(GameplayTagTableRow a, GameplayTagTableRow b)
+		public static bool operator !=(GameplayTagTableRow lhs, GameplayTagTableRow rhs)
 		{
-			return !(a == b);
+			return !(lhs == rhs);
+		}
+
+		public bool Equals(GameplayTagTableRow other)
+		{
+			if (other is null)
+			{
+				return false;
+			}
+
+			return Tag == other.Tag;
+		}
+
+		public override bool Equals(object obj)
+		{
+			return Equals(obj as GameplayTagTableRow);
+		}
+
+		public override int GetHashCode()
+		{
+			return Tag.GetHashCode();
 		}
 
 		public int CompareTo(GameplayTagTableRow other)
@@ -47,14 +72,39 @@ namespace GameplayTags
 			AllowNonRestrictedChildren = allowNonRestrictedChildren;
 		}
 
-		public static bool operator ==(RestrictedGameplayTagTableRow a, RestrictedGameplayTagTableRow b)
+		public static bool operator ==(RestrictedGameplayTagTableRow lhs, RestrictedGameplayTagTableRow rhs)
 		{
-			return a.Tag == b.Tag;
+			if (lhs is null)
+			{
+				return rhs is null;
+			}
+
+			return lhs.Equals(rhs);
 		}
 
-		public static bool operator !=(RestrictedGameplayTagTableRow a, RestrictedGameplayTagTableRow b)
+		public static bool operator !=(RestrictedGameplayTagTableRow lhs, RestrictedGameplayTagTableRow rhs)
 		{
-			return !(a == b);
+			return !(lhs == rhs);
+		}
+
+		public bool Equals(RestrictedGameplayTagTableRow other)
+		{
+			if (other is null)
+			{
+				return false;
+			}
+
+			return AllowNonRestrictedChildren == other.AllowNonRestrictedChildren && Tag == other.Tag;
+		}
+
+		public override bool Equals(object obj)
+		{
+			return Equals(obj as RestrictedGameplayTagTableRow);
+		}
+
+		public override int GetHashCode()
+		{
+			return HashCode.Combine(AllowNonRestrictedChildren, Tag);
 		}
 	}
 
@@ -280,7 +330,7 @@ namespace GameplayTags
 
 			foreach (string tag in tags)
 			{
-				AddTagTableRow(new GameplayTagTableRow(tag, ""), sourceName);
+				AddTagTableRow(new GameplayTagTableRow(tag), sourceName);
 			}
 		}
 
@@ -1088,7 +1138,6 @@ namespace GameplayTags
 					namesToRemove.Add(tagName);
 					tagsToAdd.Add(newTag);
 				}
-#if UNITY_EDITOR
 				else if (property != null)
 				{
 					GameplayTag oldTag = RequestGameplayTag(tagName, false);
@@ -1100,7 +1149,6 @@ namespace GameplayTags
 						}
 					}
 				}
-#endif
 			}
 
 			foreach (string name in namesToRemove)

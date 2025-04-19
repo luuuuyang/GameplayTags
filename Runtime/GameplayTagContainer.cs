@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using UnityEngine;
 
 namespace GameplayTags
@@ -84,27 +85,24 @@ namespace GameplayTags
 		// 	FillParentTags();
 		// }
 
-		public static bool operator ==(GameplayTagContainer a, GameplayTagContainer b)
+		public static bool operator ==(GameplayTagContainer lhs, GameplayTagContainer rhs)
 		{
-			if (a.GameplayTags.Count != b.GameplayTags.Count)
+			if (lhs is null)
 			{
-				return false;
+				return rhs is null;
 			}
-			return a.HasAllExact(b);
+
+			return lhs.Equals(rhs);
 		}
 
-		public static bool operator !=(GameplayTagContainer a, GameplayTagContainer b)
+		public static bool operator !=(GameplayTagContainer lhs, GameplayTagContainer rhs)
 		{
-			return !(a == b);
+			return !(lhs == rhs);
 		}
 
 		public override bool Equals(object obj)
 		{
-			if (obj is GameplayTagContainer other)
-			{
-				return Equals(other);
-			}
-			return false;
+			return Equals(obj as GameplayTagContainer);
 		}
 
 		public bool Equals(GameplayTagContainer other)
@@ -113,22 +111,33 @@ namespace GameplayTags
 			{
 				return false;
 			}
-			return this == other;
+
+			if (GameplayTags.Count != other.GameplayTags.Count)
+			{
+				return false;
+			}
+
+			return HasAllExact(other);
+		}
+
+		public override int GetHashCode()
+		{
+			return GameplayTags.GetHashCode();
 		}
 
 		public override string ToString()
 		{
-			string retString = string.Empty;
+			StringBuilder retString = new();
 			for (int i = 0; i < GameplayTags.Count; i++)
 			{
-				retString += GameplayTags[i].ToString();
+				retString.Append(GameplayTags[i].ToString());
 
 				if (i < GameplayTags.Count - 1)
 				{
-					retString += ", ";
+					retString.Append(", ");
 				}
 			}
-			return retString;
+			return retString.ToString();
 		}
 
 		public bool HasTag(in GameplayTag tagToCheck)
