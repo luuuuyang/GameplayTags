@@ -61,6 +61,11 @@ namespace GameplayTags
 			return GameplayTags.GetEnumerator();
 		}
 
+		public void GetGameplayTagArray(List<GameplayTag> gameplayTags)
+		{
+			gameplayTags = GameplayTags;
+		}
+
 		public void CopyFrom(GameplayTagContainer other)
 		{
 			if (other is null || this == other)

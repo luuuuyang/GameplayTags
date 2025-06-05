@@ -6,7 +6,7 @@ namespace GameplayTags
 {
 	[Serializable]
 	public struct GameplayTag : IComparable<GameplayTag>, IEquatable<GameplayTag>, ICloneable/*, ISerializationCallbackReceiver*/
-    {
+	{
 		public string TagName;
 
 		public static readonly GameplayTag EmptyTag;
@@ -57,24 +57,24 @@ namespace GameplayTags
 			}
 		}
 
-        public readonly GameplayTagContainer SingleTagContainer
-        {
-            get
-            {
-                GameplayTagNode node = GameplayTagsManager.Instance.FindTagNode(this);
+		public readonly GameplayTagContainer SingleTagContainer
+		{
+			get
+			{
+				GameplayTagNode node = GameplayTagsManager.Instance.FindTagNode(this);
 
-                if (node is not null)
-                {
-                    return node.SingleTagContainer;
-                }
+				if (node is not null)
+				{
+					return node.SingleTagContainer;
+				}
 
-                Debug.Assert(!IsValid(), $"GetSingleTagContainer passed invalid gameplay tag {TagName}, only registered tags can be queried");
+				Debug.Assert(!IsValid(), $"GetSingleTagContainer passed invalid gameplay tag {TagName}, only registered tags can be queried");
 
-                return GameplayTagContainer.EmptyContainer;
-            }
-        }
+				return GameplayTagContainer.EmptyContainer;
+			}
+		}
 
-        public static GameplayTag RequestGameplayTag(in string tagName, bool errorIfNotFound = true)
+		public static GameplayTag RequestGameplayTag(in string tagName, bool errorIfNotFound = true)
 		{
 			return GameplayTagsManager.Instance.RequestGameplayTag(tagName, errorIfNotFound);
 		}
@@ -126,7 +126,24 @@ namespace GameplayTags
 
 			return containerToCheck.GameplayTags.Contains(this);
 		}
-		
+
+		public string GetTagLeafName()
+		{
+			string rawTag = TagName;
+			if (string.IsNullOrEmpty(rawTag))
+			{
+				return rawTag;
+			}
+
+			int dotIndex = rawTag.LastIndexOf('.');
+			if (dotIndex == -1)
+			{
+				return rawTag;
+			}
+
+			return rawTag[(dotIndex + 1)..];
+		}
+
 		public static bool operator ==(GameplayTag a, GameplayTag b)
 		{
 			return a.TagName == b.TagName;
@@ -166,9 +183,9 @@ namespace GameplayTags
 			return TagName;
 		}
 
-        public object Clone()
-        {
-            return new GameplayTag(TagName);
-        }
-    }
+		public object Clone()
+		{
+			return new GameplayTag(TagName);
+		}
+	}
 }
