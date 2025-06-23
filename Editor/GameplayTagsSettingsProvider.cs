@@ -39,6 +39,8 @@ namespace GameplayTags.Editor
             {
                 OdinGameplayTagPicker.ShowWindow(new Rect(0, 0, 800, 600), false, null, null, null, GameplayTagPickerMode.ManagementMode);
             }
+
+            SerializedObject.ApplyModifiedPropertiesWithoutUndo();
         }
 
         [SettingsProvider]
