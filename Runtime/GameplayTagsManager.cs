@@ -589,6 +589,27 @@ namespace GameplayTags
 			}
 		}
 
+		public GameplayTagContainer RequestGameplayTagChildren(in GameplayTag gameplayTag)
+		{
+			GameplayTagContainer tagContainer = new();
+			GameplayTagNode gameplayTagNode = FindTagNode(gameplayTag);
+			if (gameplayTagNode is not null)
+			{
+				AddChildrenTags(tagContainer, gameplayTagNode, true, false);
+			}
+			return tagContainer;
+		}
+
+		public void SplitGameplayTagName(in GameplayTag tag, List<string> names)
+		{
+			GameplayTagNode curNode = FindTagNode(tag);
+			while (curNode is not null)
+			{
+				names.Insert(0, curNode.SimpleTagName);
+				curNode = curNode.ParentTagNode;
+			}
+		}
+
 		public GameplayTag RequestGameplayTagDirectParent(in GameplayTag gameplayTag)
 		{
 			GameplayTagNode gameplayTagNode = FindTagNode(gameplayTag);
